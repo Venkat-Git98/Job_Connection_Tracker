@@ -69,8 +69,8 @@ npm run dev
 
 ### Environment Variables (Already Set)
 ```env
-GEMINI_API_KEY=AIzaSyD1Pxm8vfjo678Yt-jg9GuhOdBhU2iBQbk
-DATABASE_URL=postgresql://postgres:prPYCjCNkfzwPUgLDjZnOEbhoAEoKUXf@interchange.proxy.rlwy.net:51675/railway
+GEMINI_API_KEY=
+DATABASE_URL=
 ```
 
 ### API Endpoints (Ready to Use)
