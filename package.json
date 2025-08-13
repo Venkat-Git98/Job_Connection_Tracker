@@ -1,0 +1,20 @@
+{
+  "name": "linkedin-job-tracker",
+  "version": "1.0.0",
+  "description": "Chrome extension with backend and dashboard for tracking LinkedIn profiles and job applications",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "backend:dev": "cd backend && npm run dev",
+    "frontend:dev": "cd frontend && npm run dev",
+    "backend:start": "cd backend && npm start",
+    "frontend:build": "cd frontend && npm run build",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": ["chrome-extension", "linkedin", "job-tracker", "ai"],
+  "author": "Your Name",
+  "license": "MIT"
+}
