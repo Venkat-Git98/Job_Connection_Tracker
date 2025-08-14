@@ -557,64 +557,120 @@ function extractLinkedInConversations() {
 
     const conversations = [];
     
-    // First, check for messaging popup/overlay (your case)
-    const messagingPopup = document.querySelector('.msg-overlay-conversation-bubble-header');
-    if (messagingPopup) {
-      console.log('📱 Found messaging popup/overlay');
+    // Check for LinkedIn messaging sidebar (right panel)
+    console.log('🔍 Looking for messaging sidebar...');
+    
+    // Look for the messaging sidebar container - based on your DOM output
+    const messagingSidebar = document.querySelector('.msg-overlay-list-bubble');
+    
+    if (messagingSidebar) {
+      console.log('📱 Found messaging sidebar (.msg-overlay-list-bubble)');
       
-      // Extract person name from popup header
-      const headerTitle = messagingPopup.querySelector('.msg-overlay-bubble-header__title');
-      if (headerTitle) {
-        const personNameLink = headerTitle.querySelector('a .hoverable-link-text');
-        if (personNameLink) {
-          const personName = personNameLink.textContent.trim();
-          
-          // Get the last message from the conversation
-          const messageList = document.querySelector('.msg-s-message-list-content');
-          let lastMessage = 'Active conversation';
-          
-          if (messageList) {
-            const lastMessageEvent = messageList.querySelector('.msg-s-message-list__event:last-child .msg-s-event-listitem__body');
-            if (lastMessageEvent) {
-              lastMessage = lastMessageEvent.textContent.trim().substring(0, 100) + '...';
+      // Look for conversation list items - these are the actual conversation links
+      const conversationItems = messagingSidebar.querySelectorAll('.msg-conversation-listitem__link');
+      
+      console.log(`Found ${conversationItems.length} conversation items in sidebar`);
+      
+      if (conversationItems.length > 0) {
+        Array.from(conversationItems).slice(0, 10).forEach((item, index) => {
+          try {
+            // Extract person name - based on your DOM structure
+            const nameEl = item.querySelector('.msg-conversation-listitem__participant-names') ||
+                          item.querySelector('.msg-conversation-card__participant-names') ||
+                          item.querySelector('h3');
+            
+            let personName = '';
+            if (nameEl && nameEl.textContent.trim()) {
+              personName = nameEl.textContent.trim();
+              console.log(`✅ Found name: ${personName}`);
             }
+            
+            // Extract last message snippet
+            const messageEl = item.querySelector('.msg-overlay-list-bubble__message-snippet--v2') ||
+                             item.querySelector('.msg-conversation-listitem__summary') ||
+                             item.querySelector('.msg-conversation-card__summary');
+            
+            let lastMessage = '';
+            if (messageEl && messageEl.textContent.trim()) {
+              lastMessage = messageEl.textContent.trim();
+            }
+            
+            if (personName) {
+              conversations.push({
+                personName,
+                lastMessage: lastMessage || 'No recent messages',
+                element: item,
+                index: index,
+                source: 'sidebar'
+              });
+              
+              console.log(`✅ Added conversation: ${personName}`);
+            }
+          } catch (error) {
+            console.error('Error extracting conversation from sidebar:', error);
           }
-          
-          conversations.push({
-            personName: personName,
-            lastMessage: lastMessage,
-            isActiveConversation: true,
-            isPopup: true
-          });
-          
-          console.log(`✅ Found conversation with: ${personName}`);
-        }
+        });
+      } else {
+        console.log('❌ No conversation items found in sidebar');
+        
+        // Debug: Let's see what's actually in the sidebar
+        const allChildren = messagingSidebar.querySelectorAll('*');
+        console.log(`Sidebar contains ${allChildren.length} total elements`);
+        
+        // Look for any elements that might contain names
+        const potentialNameElements = messagingSidebar.querySelectorAll('h3, .t-14, .t-16, [class*="participant"], [class*="name"]');
+        console.log(`Found ${potentialNameElements.length} potential name elements`);
+        
+        potentialNameElements.forEach((el, i) => {
+          if (i < 5) { // Show first 5
+            console.log(`  Name element ${i}: ${el.className} - "${el.textContent.trim().substring(0, 50)}"`);
+          }
+        });
       }
+    } else {
+      console.log('❌ No messaging sidebar found');
     }
     
-    // Check if we're in the main messaging interface
+    // Check for active conversation in the message thread area
     if (conversations.length === 0) {
-      const messageList = document.querySelector('.msg-s-message-list');
-      if (messageList) {
-        console.log('📱 Found main messaging interface');
+      console.log('🔍 Looking for active conversation thread...');
+      
+      // Look for message thread container
+      const messageThread = document.querySelector('.msg-s-message-list') ||
+                           document.querySelector('.message-thread') ||
+                           document.querySelector('[data-view-name="message-thread"]');
+      
+      if (messageThread) {
+        console.log('📱 Found message thread');
         
         // Extract participant names from message headers
-        const messageItems = document.querySelectorAll('.msg-s-event-listitem');
+        const messageItems = messageThread.querySelectorAll('.msg-s-event-listitem') ||
+                            messageThread.querySelectorAll('.message-item');
+        
         const participantNames = new Set();
         
         messageItems.forEach(item => {
-          const nameEl = item.querySelector('.msg-s-message-group__name');
-          if (nameEl && nameEl.textContent.trim()) {
-            const name = nameEl.textContent.trim();
-            // Filter out current user (Venkatesh S)
-            if (name && !name.includes('Venkatesh S')) {
-              participantNames.add(name);
+          const nameSelectors = [
+            '.msg-s-message-group__name',
+            '.message-sender-name',
+            '.sender-name'
+          ];
+          
+          nameSelectors.forEach(selector => {
+            const nameEl = item.querySelector(selector);
+            if (nameEl && nameEl.textContent.trim()) {
+              const name = nameEl.textContent.trim();
+              // Filter out current user (Venkatesh S)
+              if (name && !name.includes('Venkatesh S')) {
+                participantNames.add(name);
+              }
             }
-          }
+          });
         });
         
         // Get the last message for context
-        const lastMessageEl = document.querySelector('.msg-s-event-listitem:last-child .msg-s-event-listitem__body');
+        const lastMessageEl = messageThread.querySelector('.msg-s-event-listitem:last-child .msg-s-event-listitem__body') ||
+                             messageThread.querySelector('.message-item:last-child .message-content');
         const lastMessage = lastMessageEl ? lastMessageEl.textContent.trim().substring(0, 100) + '...' : 'Active conversation';
         
         // Add each participant as a conversation
@@ -622,82 +678,58 @@ function extractLinkedInConversations() {
           conversations.push({
             personName: name,
             lastMessage: lastMessage,
-            isActiveConversation: true
+            isActiveConversation: true,
+            source: 'thread'
           });
         });
       }
     }
     
-    // Fallback: try to find conversation list
+    // Fallback: Look for any messaging interface elements
     if (conversations.length === 0) {
-      const conversationSelectors = [
-        '.msg-conversations-container__conversations-list .msg-conversation-listitem',
-        '.msg-conversations-container__pillar .msg-conversation-listitem',
-        '.msg-conversations-container .msg-conversation-card',
-        '.msg-conversations-container .conversation-item'
-      ];
+      console.log('🔍 Looking for any messaging elements...');
       
-      let conversationElements = [];
+      // Try to find any conversation-related elements
+      const allConversationElements = document.querySelectorAll(
+        '.msg-conversation-listitem, .conversation-item, [data-view-name*="conversation"], .msg-entity-lockup'
+      );
       
-      for (const selector of conversationSelectors) {
-        conversationElements = document.querySelectorAll(selector);
-        if (conversationElements.length > 0) {
-          console.log(`✅ Found ${conversationElements.length} conversations using selector: ${selector}`);
-          break;
-        }
-      }
+      console.log(`Found ${allConversationElements.length} potential conversation elements`);
       
-      if (conversationElements.length > 0) {
-        Array.from(conversationElements).slice(0, 10).forEach((element, index) => {
-          try {
-            const nameSelectors = [
-              '.msg-conversation-listitem__participant-names',
-              '.msg-conversation-card__participant-names',
-              '.msg-entity-lockup__entity-title',
-              '.msg-conversation-listitem__link .t-14'
-            ];
-            
-            let personName = '';
-            for (const selector of nameSelectors) {
-              const nameEl = element.querySelector(selector);
-              if (nameEl && nameEl.textContent.trim()) {
-                personName = nameEl.textContent.trim();
-                break;
-              }
-            }
-            
-            const messageSelectors = [
-              '.msg-conversation-listitem__summary',
-              '.msg-conversation-card__summary',
-              '.msg-conversation-listitem__message-snippet'
-            ];
-            
-            let lastMessage = '';
-            for (const selector of messageSelectors) {
-              const messageEl = element.querySelector(selector);
-              if (messageEl && messageEl.textContent.trim()) {
-                lastMessage = messageEl.textContent.trim();
-                break;
-              }
-            }
-            
-            if (personName) {
-              conversations.push({
-                personName,
-                lastMessage: lastMessage || 'No recent messages',
-                element: element,
-                index: index
-              });
-            }
-          } catch (error) {
-            console.error('Error extracting conversation:', error);
+      Array.from(allConversationElements).slice(0, 5).forEach((element, index) => {
+        try {
+          // Extract any text that might be a person's name
+          const textContent = element.textContent.trim();
+          const lines = textContent.split('\n').map(line => line.trim()).filter(line => line);
+          
+          // Look for lines that might be names (short, capitalized)
+          const potentialNames = lines.filter(line => 
+            line.length > 2 && 
+            line.length < 50 && 
+            /^[A-Z]/.test(line) && 
+            !line.includes('•') &&
+            !line.includes('ago') &&
+            !line.includes('AM') &&
+            !line.includes('PM')
+          );
+          
+          if (potentialNames.length > 0) {
+            conversations.push({
+              personName: potentialNames[0],
+              lastMessage: lines[1] || 'Found conversation',
+              element: element,
+              index: index,
+              source: 'fallback'
+            });
           }
-        });
-      }
+        } catch (error) {
+          console.error('Error in fallback extraction:', error);
+        }
+      });
     }
     
     if (conversations.length === 0) {
-      throw new Error('No conversations found. Please open LinkedIn messaging popup or navigate to a conversation.');
+      throw new Error('No conversations found. Please open LinkedIn messaging or navigate to a conversation.');
     }
     
     console.log('💬 Extracted conversations:', conversations);
@@ -715,60 +747,178 @@ function getConversationHistory(conversationIndex) {
     
     const messages = [];
     
-    // Look for the message list container
-    const messageList = document.querySelector('.msg-s-message-list-content');
-    if (!messageList) {
-      console.log('❌ No message list found');
+    // For LinkedIn messaging sidebar, we need to look for the active conversation thread
+    // This could be in several places depending on the interface
+    
+    // Method 1: Look for message thread in the main content area
+    let messageContainer = document.querySelector('.msg-s-message-list-content') ||
+                          document.querySelector('.msg-s-message-list') ||
+                          document.querySelector('[data-view-name="message-thread"]');
+    
+    // Method 2: Look for message thread in overlay/popup
+    if (!messageContainer) {
+      messageContainer = document.querySelector('.msg-overlay-conversation-bubble .msg-s-message-list-content') ||
+                        document.querySelector('.msg-overlay-conversation-bubble .msg-s-message-list');
+    }
+    
+    // Method 3: Look for any message container
+    if (!messageContainer) {
+      messageContainer = document.querySelector('[class*="message-list"]') ||
+                        document.querySelector('[class*="msg-s-message"]');
+    }
+    
+    if (!messageContainer) {
+      console.log('❌ No message container found');
+      console.log('🔍 Available message-related elements:');
+      const msgElements = document.querySelectorAll('[class*="msg"], [class*="message"]');
+      console.log(`Found ${msgElements.length} message-related elements`);
       return [];
     }
     
-    // Get all message events
-    const messageEvents = messageList.querySelectorAll('.msg-s-message-list__event');
-    console.log(`📨 Found ${messageEvents.length} message events`);
+    console.log('✅ Found message container:', messageContainer.className);
     
-    Array.from(messageEvents).forEach(eventEl => {
+    // Get all message events/items
+    const messageSelectors = [
+      '.msg-s-message-list__event',
+      '.msg-s-event-listitem',
+      '.message-item',
+      '[class*="message-event"]',
+      '[class*="event-listitem"]'
+    ];
+    
+    let messageElements = [];
+    for (const selector of messageSelectors) {
+      messageElements = messageContainer.querySelectorAll(selector);
+      if (messageElements.length > 0) {
+        console.log(`📨 Found ${messageElements.length} messages using selector: ${selector}`);
+        break;
+      }
+    }
+    
+    if (messageElements.length === 0) {
+      console.log('❌ No message elements found');
+      return [];
+    }
+    
+    Array.from(messageElements).forEach((eventEl, index) => {
       try {
         // Skip time headers and other non-message elements
-        if (eventEl.querySelector('.msg-s-message-list__time-heading')) {
+        if (eventEl.querySelector('.msg-s-message-list__time-heading') ||
+            eventEl.querySelector('[class*="time-heading"]')) {
           return;
         }
         
-        // Get the message item within the event
-        const messageItem = eventEl.querySelector('.msg-s-event-listitem');
-        if (!messageItem) return;
+        // Get the message item (might be the element itself or a child)
+        const messageItem = eventEl.querySelector('.msg-s-event-listitem') || eventEl;
         
-        // Get sender name
-        const senderNameEl = messageItem.querySelector('.msg-s-message-group__name');
-        const senderName = senderNameEl ? senderNameEl.textContent.trim() : 'Unknown';
+        // Get sender name with multiple selectors
+        const senderSelectors = [
+          '.msg-s-message-group__name',
+          '.msg-s-message-group__profile-link',
+          '.message-sender-name',
+          '.sender-name',
+          '[class*="message-group__name"]'
+        ];
         
-        // Determine if message was sent by current user (Venkatesh S)
-        const isSent = senderName.includes('Venkatesh S');
+        let senderName = 'Unknown';
+        for (const selector of senderSelectors) {
+          const senderEl = messageItem.querySelector(selector);
+          if (senderEl && senderEl.textContent.trim()) {
+            senderName = senderEl.textContent.trim();
+            break;
+          }
+        }
         
-        // Get message content
-        const contentEl = messageItem.querySelector('.msg-s-event-listitem__body');
-        if (!contentEl) return;
+        // Get message content with multiple selectors
+        const contentSelectors = [
+          '.msg-s-event-listitem__body',
+          '.msg-s-message-group__message',
+          '.message-content',
+          '.message-body',
+          '[class*="event-listitem__body"]',
+          '[class*="message-group__message"]'
+        ];
         
-        const content = contentEl.textContent.trim();
-        if (!content) return;
+        let content = '';
+        for (const selector of contentSelectors) {
+          const contentEl = messageItem.querySelector(selector);
+          if (contentEl && contentEl.textContent.trim()) {
+            content = contentEl.textContent.trim();
+            break;
+          }
+        }
+        
+        if (!content) {
+          // Fallback: try to get any text content that looks like a message
+          const allText = messageItem.textContent.trim();
+          const lines = allText.split('\n').map(line => line.trim()).filter(line => line);
+          
+          // Look for lines that might be message content (not names, timestamps, etc.)
+          const potentialContent = lines.find(line => 
+            line.length > 10 && 
+            !line.includes('AM') && 
+            !line.includes('PM') && 
+            !line.match(/^\d+:\d+/) &&
+            !line.match(/^[A-Z][a-z]+ [A-Z][a-z]+$/) // Skip names like "John Doe"
+          );
+          
+          if (potentialContent) {
+            content = potentialContent;
+          }
+        }
+        
+        if (!content) return; // Skip if no content found
+        
+        // Determine if message was sent by current user
+        const isSent = senderName.includes('Venkatesh S') || 
+                      messageItem.classList.contains('msg-s-event-listitem--other') === false ||
+                      content.startsWith('You:');
         
         // Get timestamp
-        const timestampEl = messageItem.querySelector('.msg-s-message-group__timestamp');
-        const timestamp = timestampEl ? timestampEl.textContent.trim() : new Date().toISOString();
+        const timestampSelectors = [
+          '.msg-s-message-group__timestamp',
+          '.message-timestamp',
+          '.timestamp',
+          '[class*="timestamp"]'
+        ];
+        
+        let timestamp = new Date().toISOString();
+        for (const selector of timestampSelectors) {
+          const timestampEl = messageItem.querySelector(selector);
+          if (timestampEl && timestampEl.textContent.trim()) {
+            timestamp = timestampEl.textContent.trim();
+            break;
+          }
+        }
         
         messages.push({
-          content,
-          isSent,
+          content: content,
+          isSent: isSent,
           sender: senderName,
-          timestamp: timestamp
+          timestamp: timestamp,
+          index: index
         });
+        
+        console.log(`📝 Message ${index}: ${senderName} - ${content.substring(0, 50)}...`);
         
       } catch (error) {
         console.error('Error extracting individual message:', error);
       }
     });
     
-    // Sort messages by their DOM order (chronological)
+    // Sort messages chronologically (oldest first)
+    messages.sort((a, b) => a.index - b.index);
+    
     console.log(`📜 Extracted ${messages.length} messages from conversation`);
+    
+    // Log sample messages for debugging
+    if (messages.length > 0) {
+      console.log('Sample messages:');
+      messages.slice(-3).forEach((msg, i) => {
+        console.log(`  ${i}: ${msg.sender} - ${msg.content.substring(0, 100)}...`);
+      });
+    }
+    
     return messages;
     
   } catch (error) {
