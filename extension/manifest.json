@@ -17,7 +17,7 @@
     "https://indeed.com/*",
     "https://*.indeed.com/*",
     "https://wellfound.com/*",
-    "http://localhost:3001/*"
+    "https://jobconnectiontracker-production.up.railway.app/*"
   ],
   "background": {
     "service_worker": "background.js"

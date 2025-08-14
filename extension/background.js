@@ -1,6 +1,6 @@
 // Background service worker for LinkedIn Job Tracker extension
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'https://jobconnectiontracker-production.up.railway.app/api';
 
 // Handle page data extraction
 async function extractPageData(tabId, url, title) {
