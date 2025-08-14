@@ -38,24 +38,24 @@ const Layout = ({ children }) => {
   }, [isMobileMenuOpen])
 
   const navItems = [
-    {
-      path: '/',
-      label: 'Dashboard',
-      gradient: 'var(--gradient-primary)'
-    },
     { 
       path: '/connections', 
       label: 'Connections',
-      gradient: 'var(--gradient-secondary)'
+      gradient: 'var(--gradient-primary)'
     },
     { 
       path: '/jobs', 
       label: 'Jobs',
-      gradient: 'var(--gradient-success)'
+      gradient: 'var(--gradient-secondary)'
     },
     { 
       path: '/companies', 
       label: 'Companies',
+      gradient: 'var(--gradient-success)'
+    },
+    { 
+      path: '/emails', 
+      label: 'Email Monitor',
       gradient: 'var(--gradient-warning)'
     },
     { 
@@ -128,6 +128,12 @@ const Layout = ({ children }) => {
         
         {/* Mobile Navigation */}
         <nav className={`nav-mobile ${isMobileMenuOpen ? 'nav-mobile-open' : ''}`}>
+          <button 
+            className="nav-mobile-close"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            ×
+          </button>
           <div className="nav-mobile-content">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path
@@ -136,6 +142,10 @@ const Layout = ({ children }) => {
                   key={item.path}
                   to={item.path}
                   className={`nav-mobile-link ${isActive ? 'nav-mobile-link-active' : ''}`}
+                  style={{
+                    background: isActive ? item.gradient : 'transparent',
+                    color: isActive ? 'white' : 'var(--text-secondary)'
+                  }}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <span className="nav-label">{item.label}</span>
@@ -168,7 +178,7 @@ const Layout = ({ children }) => {
         .header {
           position: sticky;
           top: 0;
-          z-index: 100;
+          z-index: 1000;
           background: var(--bg-glass);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
@@ -344,52 +354,76 @@ const Layout = ({ children }) => {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          backdrop-filter: blur(4px);
-          -webkit-backdrop-filter: blur(4px);
-          z-index: 98;
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          z-index: 998;
+          animation: fadeIn 0.3s ease-out;
         }
 
         /* Mobile Navigation */
         .nav-mobile {
           display: none;
-          position: absolute;
-          top: 100%;
+          position: fixed;
+          top: 0;
           left: 0;
           right: 0;
+          bottom: 0;
           background: var(--bg-card);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
-          border-bottom: 1px solid var(--border-primary);
-          box-shadow: var(--shadow-xl);
-          transform: translateY(-100%);
+          transform: translateX(-100%);
           opacity: 0;
-          transition: var(--transition-normal);
-          z-index: 99;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 999;
+          overflow-y: auto;
         }
 
         .nav-mobile-open {
-          transform: translateY(0);
+          transform: translateX(0);
           opacity: 1;
         }
 
         .nav-mobile-content {
-          padding: var(--space-4);
+          padding: var(--space-8) var(--space-6);
+          padding-top: 120px;
           display: flex;
           flex-direction: column;
-          gap: var(--space-2);
+          gap: var(--space-4);
+          min-height: 100vh;
+        }
+
+        .nav-mobile-close {
+          position: absolute;
+          top: var(--space-6);
+          right: var(--space-6);
+          background: none;
+          border: none;
+          color: var(--text-primary);
+          font-size: var(--text-2xl);
+          cursor: pointer;
+          padding: var(--space-2);
+          border-radius: var(--radius-full);
+          transition: var(--transition-normal);
+          z-index: 1001;
+        }
+
+        .nav-mobile-close:hover {
+          background: var(--bg-glass-light);
         }
 
         .nav-mobile-link {
           display: flex;
           align-items: center;
-          padding: var(--space-4);
-          border-radius: var(--radius-xl);
+          padding: var(--space-5) var(--space-6);
+          border-radius: var(--radius-2xl);
           text-decoration: none;
           color: var(--text-secondary);
-          font-weight: 600;
+          font-weight: 700;
+          font-size: var(--text-lg);
           transition: var(--transition-normal);
           border: 1px solid transparent;
+          margin-bottom: var(--space-2);
         }
 
         .nav-mobile-link:hover {

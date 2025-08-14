@@ -724,6 +724,16 @@ main .card:first-of-type {
   border-radius: var(--border-radius-xl);
 }
 
+/* Fix for dropdown overflow in tables */
+.table td:last-child {
+  position: relative;
+  overflow: visible;
+}
+
+.table-responsive:has(.dropdown-open) {
+  overflow: visible;
+}
+
 /* Loading States */
 .loading {
   display: inline-block;

@@ -232,38 +232,7 @@ const AnalyticsHub = () => {
         </div>
       </div>
 
-      {/* Insights */}
-      <div className="card animate-slide-in-up" style={{ animationDelay: '0.3s' }}>
-        <div className="card-header">
-          <h3 className="card-title">
-            <span>💡</span>
-            AI Insights & Recommendations
-          </h3>
-        </div>
-        <div className="insights-grid">
-          <div className="insight-item">
-            <div className="insight-icon">🎯</div>
-            <div className="insight-content">
-              <h4>Optimize Your Timing</h4>
-              <p>Your connection requests get 40% better response rates on Thursdays. Consider scheduling your outreach accordingly.</p>
-            </div>
-          </div>
-          <div className="insight-item">
-            <div className="insight-icon">📝</div>
-            <div className="insight-content">
-              <h4>Improve Message Quality</h4>
-              <p>Messages mentioning specific company projects have 60% higher acceptance rates. Use the AI message generator for better results.</p>
-            </div>
-          </div>
-          <div className="insight-item">
-            <div className="insight-icon">🔄</div>
-            <div className="insight-content">
-              <h4>Follow Up Strategy</h4>
-              <p>Following up after 1 week increases response rates by 25%. Set reminders for your pending connections.</p>
-            </div>
-          </div>
-        </div>
-      </div>
+
 
       <style jsx>{`
         .analytics-hub {
@@ -514,45 +483,7 @@ const AnalyticsHub = () => {
           background-clip: text;
         }
 
-        .insights-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: var(--space-6);
-        }
 
-        .insight-item {
-          display: flex;
-          gap: var(--space-4);
-          padding: var(--space-6);
-          background: var(--bg-glass-light);
-          border: 1px solid var(--border-primary);
-          border-radius: var(--radius-2xl);
-          transition: var(--transition-normal);
-        }
-
-        .insight-item:hover {
-          transform: translateY(-2px);
-          box-shadow: var(--shadow-md);
-        }
-
-        .insight-icon {
-          font-size: var(--text-2xl);
-          flex-shrink: 0;
-        }
-
-        .insight-content h4 {
-          font-size: var(--text-base);
-          font-weight: 700;
-          color: var(--text-primary);
-          margin: 0 0 var(--space-2) 0;
-        }
-
-        .insight-content p {
-          font-size: var(--text-sm);
-          color: var(--text-secondary);
-          line-height: var(--leading-relaxed);
-          margin: 0;
-        }
 
         @media (max-width: 1200px) {
           .content-grid {
@@ -572,14 +503,6 @@ const AnalyticsHub = () => {
           }
 
           .metric-card {
-            padding: var(--space-4);
-          }
-
-          .insights-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .insight-item {
             padding: var(--space-4);
           }
         }

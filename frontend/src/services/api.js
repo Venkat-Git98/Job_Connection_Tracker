@@ -69,7 +69,7 @@ export const apiService = {
   getEmailEvents: (params = {}) => api.get('/email/events', { params }),
   getEmailMonitoringStatus: () => api.get('/email/status'),
   checkEmailsNow: () => api.post('/email/check-now'),
-  startEmailMonitoring: (intervalMinutes) => 
+  startEmailMonitoring: (intervalMinutes = 5) => 
     api.post('/email/start-monitoring', { intervalMinutes }),
 
   // Companies

@@ -591,6 +591,16 @@
   border-radius: var(--radius-3xl);
 }
 
+/* Fix for dropdown overflow in tables */
+.table td:last-child {
+  position: relative;
+  overflow: visible;
+}
+
+.table-responsive:has(.dropdown-open) {
+  overflow: visible;
+}
+
 /* ===== FORMS ===== */
 .form-group {
   margin-bottom: var(--space-4);

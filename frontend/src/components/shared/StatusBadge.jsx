@@ -21,6 +21,15 @@ const StatusBadge = ({ status, type = 'job' }) => {
         case 'declined': return 'status-declined';
         default: return 'status-none';
       }
+    } else if (type === 'email') {
+      switch (status) {
+        case 'rejection': return 'status-rejected';
+        case 'interview_invite': return 'status-interviewing';
+        case 'assessment': return 'status-interviewing';
+        case 'offer': return 'status-offer';
+        case 'follow_up': return 'status-requested';
+        default: return 'status-none';
+      }
     }
     return 'status-none';
   };
