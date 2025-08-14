@@ -8,10 +8,32 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(helmet());
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://localhost:5173'],
+
+// CORS configuration (allows extra origins from CORS_ORIGINS env var, comma-separated)
+const defaultCorsOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://localhost:5173'
+];
+const extraCorsOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+const allowedCorsOrigins = [...defaultCorsOrigins, ...extraCorsOrigins];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const isAllowed = allowedCorsOrigins.includes(origin);
+    return callback(null, isAllowed);
+  },
   credentials: true
-}));
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+console.log('CORS allowed origins:', allowedCorsOrigins);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
