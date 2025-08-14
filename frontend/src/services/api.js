@@ -72,10 +72,17 @@ export const apiService = {
   startEmailMonitoring: (intervalMinutes) => 
     api.post('/email/start-monitoring', { intervalMinutes }),
 
+  // Companies
+  getCompanies: (params = {}) => api.get('/companies', { params }),
+  getCompanyDetails: (companyId) => api.get(`/companies/${companyId}`),
+
   // Analytics
   getDashboardAnalytics: (timeRange = '30d') => 
     api.get('/analytics/dashboard', { params: { timeRange } }),
   getPerformanceMetrics: () => api.get('/analytics/performance'),
+  getDashboardStats: () => api.get('/analytics/dashboard-stats'),
+  getRecentActivity: () => api.get('/analytics/recent-activity'),
+  getAnalytics: (params = {}) => api.get('/analytics', { params }),
 
   // Health check
   healthCheck: () => api.get('/health', { baseURL: API_BASE_URL.replace('/api', '') }),
