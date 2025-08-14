@@ -73,8 +73,8 @@ export const apiService = {
     api.post('/email/start-monitoring', { intervalMinutes }),
 
   // Companies
-  getCompanies: (params = {}) => api.get('/companies', { params }),
-  getCompanyDetails: (companyId) => api.get(`/companies/${companyId}`),
+  getCompanies: (params = {}) => api.get('/outreach/summary', { params }),
+  getCompanyDetails: (companyName) => api.get(`/outreach/company/${encodeURIComponent(companyName)}`),
 
   // Analytics
   getDashboardAnalytics: (timeRange = '30d') => 

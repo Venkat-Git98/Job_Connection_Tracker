@@ -17,6 +17,26 @@ const Layout = ({ children }) => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isMobileMenuOpen && !event.target.closest('.header')) {
+        setIsMobileMenuOpen(false)
+      }
+    }
+    
+    if (isMobileMenuOpen) {
+      document.addEventListener('click', handleClickOutside)
+      document.body.style.overflow = 'hidden' // Prevent background scrolling
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    
+    return () => {
+      document.removeEventListener('click', handleClickOutside)
+      document.body.style.overflow = 'unset'
+    }
+  }, [isMobileMenuOpen])
+
   const navItems = [
     {
       path: '/',
@@ -93,7 +113,7 @@ const Layout = ({ children }) => {
           <div className="header-actions">
             <ThemeToggle />
             <button
-              className="mobile-menu-toggle"
+              className={`mobile-menu-toggle ${isMobileMenuOpen ? 'open' : ''}`}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               <span></span>
@@ -103,6 +123,9 @@ const Layout = ({ children }) => {
           </div>
         </div>
 
+        {/* Mobile Navigation Overlay */}
+        {isMobileMenuOpen && <div className="nav-mobile-overlay" onClick={() => setIsMobileMenuOpen(false)} />}
+        
         {/* Mobile Navigation */}
         <nav className={`nav-mobile ${isMobileMenuOpen ? 'nav-mobile-open' : ''}`}>
           <div className="nav-mobile-content">
@@ -145,7 +168,7 @@ const Layout = ({ children }) => {
         .header {
           position: sticky;
           top: 0;
-          z-index: 40;
+          z-index: 100;
           background: var(--bg-glass);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
@@ -295,10 +318,36 @@ const Layout = ({ children }) => {
           background: var(--text-primary);
           border-radius: var(--radius-full);
           transition: var(--transition-normal);
+          transform-origin: center;
+        }
+
+        .mobile-menu-toggle.open span:nth-child(1) {
+          transform: rotate(45deg) translate(6px, 6px);
+        }
+
+        .mobile-menu-toggle.open span:nth-child(2) {
+          opacity: 0;
+        }
+
+        .mobile-menu-toggle.open span:nth-child(3) {
+          transform: rotate(-45deg) translate(6px, -6px);
         }
 
         .mobile-menu-toggle:hover {
           background: var(--bg-glass-light);
+        }
+
+        /* Mobile Navigation Overlay */
+        .nav-mobile-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          z-index: 98;
         }
 
         /* Mobile Navigation */
@@ -316,7 +365,7 @@ const Layout = ({ children }) => {
           transform: translateY(-100%);
           opacity: 0;
           transition: var(--transition-normal);
-          z-index: 50;
+          z-index: 99;
         }
 
         .nav-mobile-open {

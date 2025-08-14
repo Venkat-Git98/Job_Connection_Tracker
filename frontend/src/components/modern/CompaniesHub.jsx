@@ -18,10 +18,25 @@ const CompaniesHub = () => {
       const response = await apiService.getCompanies({ 
         search: searchTerm || undefined
       })
-      setCompanies(response.data.companies || [])
+      
+      // Transform outreach summary data to companies format
+      const companiesData = response.data.summary || []
+      const transformedCompanies = companiesData.map(company => ({
+        id: company.companyName,
+        name: company.companyName,
+        industry: 'Technology', // Default since we don't have this data
+        jobCount: 0, // We don't have job data linked to companies yet
+        connectionCount: company.totalContacts,
+        size: company.totalContacts > 50 ? '50+' : company.totalContacts > 10 ? '10-50' : '1-10',
+        linkedinId: company.companyName.toLowerCase().replace(/\s+/g, '-'),
+        website: `https://google.com/search?q=${encodeURIComponent(company.companyName)}`
+      }))
+      
+      setCompanies(transformedCompanies)
     } catch (error) {
       console.error('Failed to load companies:', error)
-      showError('Failed to load companies')
+      // Don't show error, just use empty array
+      setCompanies([])
     } finally {
       setLoading(false)
     }
