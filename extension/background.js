@@ -103,6 +103,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(error => sendResponse({ error: error.message }));
     return true;
   }
+  
+  if (request.action === 'generateContextualMessage') {
+    generateContextualMessage(request.data)
+      .then(sendResponse)
+      .catch(error => sendResponse({ error: error.message }));
+    return true;
+  }
 });
 
 // Generate connection request using AI
@@ -173,6 +180,30 @@ async function markJobAsApplied(jobUrl) {
     return result;
   } catch (error) {
     console.error('Failed to mark job as applied:', error);
+    throw error;
+  }
+}
+
+// Generate contextual message using AI
+async function generateContextualMessage(messageData) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/rewrite/contextual-message`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messageData)
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to generate contextual message');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Failed to generate contextual message:', error);
     throw error;
   }
 }

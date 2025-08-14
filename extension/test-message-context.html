@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Message Context Extractor - Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(20px);
+        }
+
+        h1 {
+            color: #2d3748;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .feature-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .feature-section h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-icon {
+            font-size: 1.2em;
+            width: 30px;
+            text-align: center;
+        }
+
+        .demo-conversation {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 12px 16px;
+            border-radius: 16px;
+            max-width: 80%;
+        }
+
+        .message.sent {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.received {
+            background: #e2e8f0;
+            color: #2d3748;
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+
+        .workflow-step {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            margin: 0 0 8px 0;
+            color: #2d3748;
+        }
+
+        .step-content p {
+            margin: 0;
+            color: #4a5568;
+            line-height: 1.5;
+        }
+
+        .tech-specs {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+        }
+
+        .highlight {
+            background: rgba(102, 126, 234, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            color: #92400e;
+        }
+
+        .success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            color: #047857;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 LinkedIn Message Context Extractor</h1>
+        
+        <div class="feature-section">
+            <h2>💬 Core Features</h2>
+            <ul class="feature-list">
+                <li>
+                    <span class="feature-icon">🔍</span>
+                    <strong>Smart Conversation Detection:</strong> Automatically detects open LinkedIn messaging popups and active conversations
+                </li>
+                <li>
+                    <span class="feature-icon">👥</span>
+                    <strong>Contact Extraction:</strong> Identifies conversation participants and their profile information
+                </li>
+                <li>
+                    <span class="feature-icon">📜</span>
+                    <strong>Message History Analysis:</strong> Extracts full conversation context for AI processing
+                </li>
+                <li>
+                    <span class="feature-icon">🤖</span>
+                    <strong>AI-Powered Generation:</strong> Creates contextually-aware messages based on conversation history
+                </li>
+                <li>
+                    <span class="feature-icon">✨</span>
+                    <strong>Message Rewriting:</strong> Improves draft messages with professional tone and relevant expertise
+                </li>
+                <li>
+                    <span class="feature-icon">🎯</span>
+                    <strong>Context-Aware Responses:</strong> Generates messages that reference previous conversation points
+                </li>
+            </ul>
+        </div>
+
+        <div class="feature-section">
+            <h2>🔄 How It Works</h2>
+            
+            <div class="workflow-step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Extract Message Screen</h3>
+                    <p>Click "Extract Message Context" button while on LinkedIn messaging to scan for active conversations</p>
+                </div>
+            </div>
+
+            <div class="workflow-step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Conversation Detection</h3>
+                    <p>Extension identifies open messaging popups and conversation participants automatically</p>
+                </div>
+            </div>
+
+            <div class="workflow-step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Select Conversation</h3>
+                    <p>Choose from list of active conversations to open the AI chat interface</p>
+                </div>
+            </div>
+
+            <div class="workflow-step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>AI Message Generation</h3>
+                    <p>Use "Generate" for new contextual messages or "Rewrite" to improve your drafts</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <h2>💡 Example Conversation Context</h2>
+            <div class="demo-conversation">
+                <div class="message received">
+                    Hi Venkat! I saw your background in ML engineering. We're working on some interesting computer vision projects at TechCorp.
+                </div>
+                <div class="message sent">
+                    That sounds fascinating! I've been working extensively with CV models, particularly in object detection and image segmentation. What specific challenges are you tackling?
+                </div>
+                <div class="message received">
+                    We're trying to improve accuracy in medical imaging analysis. The current models struggle with edge cases.
+                </div>
+                <div class="message sent">
+                    <strong>AI Generated Response:</strong><br>
+                    That's a critical application area! I've worked on similar challenges in medical imaging, particularly with data augmentation techniques for rare cases and ensemble methods for improved robustness. Have you explored synthetic data generation or active learning approaches for handling those edge cases? I'd be happy to share some insights from my recent projects in healthcare AI.
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <h2>🛠️ Technical Implementation</h2>
+            <div class="tech-specs">
+// Content Script Functions
+extractLinkedInConversations() - Scans messaging interface
+getConversationHistory() - Extracts message history
+detectMessagingPopup() - Identifies active conversations
+
+// AI Processing
+generateContextualMessage() - Creates context-aware responses
+analyzeConversationHistory() - Extracts topics and tone
+buildContextualPrompt() - Constructs AI prompts with context
+
+// Backend Integration
+/api/rewrite/contextual-message - AI generation endpoint
+Gemini AI integration with conversation analysis
+Professional profile context injection
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <h2>🎯 AI Context Analysis</h2>
+            <ul class="feature-list">
+                <li>
+                    <span class="feature-icon">📊</span>
+                    <strong>Conversation Stage Detection:</strong> Initial, ongoing, or established relationship
+                </li>
+                <li>
+                    <span class="feature-icon">🎭</span>
+                    <strong>Tone Analysis:</strong> Professional, casual, enthusiastic, or inquisitive
+                </li>
+                <li>
+                    <span class="feature-icon">🏷️</span>
+                    <strong>Topic Extraction:</strong> Technology, career, business, collaboration themes
+                </li>
+                <li>
+                    <span class="feature-icon">🔗</span>
+                    <strong>Expertise Matching:</strong> Connects Venkat's ML/AI background to conversation topics
+                </li>
+                <li>
+                    <span class="feature-icon">💼</span>
+                    <strong>Professional Context:</strong> Incorporates company information and role relevance
+                </li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <strong>✅ Ready to Use!</strong><br>
+            The LinkedIn Message Context Extractor is now fully integrated into your extension. Navigate to LinkedIn messaging and click "Extract Message Context" to start using the AI-powered conversation assistant.
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Usage Notes:</strong><br>
+            • Works best on LinkedIn messaging pages<br>
+            • Requires active conversations to extract context<br>
+            • AI responses are generated based on Venkat's professional profile<br>
+            • Always review generated messages before sending
+        </div>
+    </div>
+</body>
+</html>

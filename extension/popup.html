@@ -450,6 +450,168 @@
     .hidden {
       display: none;
     }
+
+    /* Message Context Interface Styles */
+    .conversation-list {
+      margin-bottom: 20px;
+    }
+
+    .conversation-list h5 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: #4a5568;
+    }
+
+    .conversation-items {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .conversation-item {
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .conversation-item:hover {
+      background: rgba(255, 255, 255, 0.95);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .conversation-item .person-name {
+      font-weight: 700;
+      color: #2d3748;
+      margin-bottom: 4px;
+    }
+
+    .conversation-item .last-message {
+      font-size: 12px;
+      color: #64748b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .chat-interface {
+      display: flex;
+      flex-direction: column;
+      height: 400px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .chat-header {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-header h5 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .close-chat-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.3s ease;
+    }
+
+    .close-chat-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .conversation-history {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .message-bubble {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 13px;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+
+    .message-bubble.sent {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-bubble.received {
+      align-self: flex-start;
+      background: #f1f5f9;
+      color: #334155;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-composer {
+      padding: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .composer-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      justify-content: flex-end;
+    }
+
+    .btn-sm {
+      padding: 8px 16px;
+      font-size: 12px;
+      border-radius: 12px;
+    }
+
+    /* Scrollbar styling for conversation history */
+    .conversation-history::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .conversation-history::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .conversation-history::-webkit-scrollbar-thumb {
+      background: rgba(102, 126, 234, 0.3);
+      border-radius: 2px;
+    }
+
+    .conversation-history::-webkit-scrollbar-thumb:hover {
+      background: rgba(102, 126, 234, 0.5);
+    }
   </style>
 </head>
 <body>
@@ -472,6 +634,10 @@
         🔍 Extract Page Data
       </button>
 
+      <button id="extractMessagesBtn" class="btn btn-ai">
+        💬 Extract Message Context
+      </button>
+
       <button id="generateConnectionBtn" class="btn btn-ai hidden">
         ✨ Generate Connection Request
       </button>
@@ -487,6 +653,33 @@
       <button id="rewriteBtn" class="btn btn-ai" style="margin-top: 16px; width: 100%;">
         ✨ Rewrite with AI
       </button>
+    </div>
+
+    <!-- Message Context Interface -->
+    <div id="messageContextSection" class="message-section hidden">
+      <h4>💬 LinkedIn Message Assistant</h4>
+      
+      <div id="conversationList" class="conversation-list hidden">
+        <h5>Active Conversations</h5>
+        <div id="conversationItems" class="conversation-items"></div>
+      </div>
+      
+      <div id="chatInterface" class="chat-interface hidden">
+        <div class="chat-header">
+          <h5 id="chatPersonName">Chat with...</h5>
+          <button id="closeChatBtn" class="close-chat-btn">×</button>
+        </div>
+        
+        <div id="conversationHistory" class="conversation-history"></div>
+        
+        <div class="message-composer">
+          <textarea id="draftMessageInput" class="message-input" placeholder="Type your message or say 'generate' to create an AI message..."></textarea>
+          <div class="composer-actions">
+            <button id="generateMessageBtn" class="btn btn-ai btn-sm">✨ Generate</button>
+            <button id="rewriteDraftBtn" class="btn btn-secondary btn-sm">🔄 Rewrite</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="generatedContent" class="hidden"></div>

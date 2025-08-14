@@ -61,6 +61,56 @@ router.post('/message', async (req, res) => {
   }
 });
 
+// Generate contextual message
+router.post('/contextual-message', async (req, res) => {
+  try {
+    const { personName, conversationHistory, context } = req.body;
+
+    if (!personName || typeof personName !== 'string') {
+      return res.status(400).json({
+        error: 'Missing or invalid required field: personName'
+      });
+    }
+
+    // Validate conversation history if provided
+    let validatedHistory = [];
+    if (conversationHistory && Array.isArray(conversationHistory)) {
+      validatedHistory = conversationHistory
+        .filter(msg => msg && msg.content)
+        .slice(-15) // Limit to last 15 messages for context
+        .map(msg => ({
+          content: String(msg.content).trim().substring(0, 500),
+          isSent: Boolean(msg.isSent),
+          sender: msg.sender || (msg.isSent ? 'You' : personName),
+          timestamp: msg.timestamp || new Date().toISOString()
+        }));
+    }
+
+    // Generate contextual message using Gemini
+    const result = await geminiService.generateContextualMessage(
+      personName.trim(),
+      validatedHistory,
+      context || 'professional_networking'
+    );
+
+    res.json({
+      success: true,
+      message: result.message,
+      context: result.context,
+      tone: result.tone,
+      conversationLength: validatedHistory.length,
+      generatedAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Contextual message generation error:', error);
+    res.status(500).json({
+      error: 'Failed to generate contextual message',
+      message: error.message
+    });
+  }
+});
+
 // Health check for rewrite service
 router.get('/health', (req, res) => {
   res.json({

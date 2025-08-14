@@ -8,24 +8,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   const pageTypeEl = document.getElementById('pageType');
   const pageUrlEl = document.getElementById('pageUrl');
   const extractBtn = document.getElementById('extractBtn');
+  const extractMessagesBtn = document.getElementById('extractMessagesBtn');
   const generateConnectionBtn = document.getElementById('generateConnectionBtn');
   const markAppliedBtn = document.getElementById('markAppliedBtn');
   const messageSection = document.getElementById('messageSection');
   const messageInput = document.getElementById('messageInput');
   const rewriteBtn = document.getElementById('rewriteBtn');
   const generatedContent = document.getElementById('generatedContent');
+  
+  // Message Context Interface Elements
+  const messageContextSection = document.getElementById('messageContextSection');
+  const conversationList = document.getElementById('conversationList');
+  const conversationItems = document.getElementById('conversationItems');
+  const chatInterface = document.getElementById('chatInterface');
+  const chatPersonName = document.getElementById('chatPersonName');
+  const closeChatBtn = document.getElementById('closeChatBtn');
+  const conversationHistory = document.getElementById('conversationHistory');
+  const draftMessageInput = document.getElementById('draftMessageInput');
+  const generateMessageBtn = document.getElementById('generateMessageBtn');
+  const rewriteDraftBtn = document.getElementById('rewriteDraftBtn');
 
 
   let currentPageData = null;
+  let currentConversations = [];
+  let selectedConversation = null;
 
   // Load last extraction data
   await loadLastExtraction();
 
   // Event listeners
   extractBtn.addEventListener('click', extractPageData);
+  extractMessagesBtn.addEventListener('click', extractMessageContext);
   generateConnectionBtn.addEventListener('click', generateConnectionRequest);
   markAppliedBtn.addEventListener('click', markJobAsApplied);
   rewriteBtn.addEventListener('click', rewriteMessage);
+  
+  // Message Context Event Listeners
+  closeChatBtn.addEventListener('click', closeChatInterface);
+  generateMessageBtn.addEventListener('click', generateContextualMessage);
+  rewriteDraftBtn.addEventListener('click', rewriteDraftMessage);
 
   async function loadLastExtraction() {
     try {
@@ -205,6 +226,194 @@ document.addEventListener('DOMContentLoaded', async () => {
       showStatus('error', `Failed to mark job as applied: ${error.message}`);
     } finally {
       setLoading(markAppliedBtn, false);
+    }
+  }
+
+  async function extractMessageContext() {
+    try {
+      setLoading(extractMessagesBtn, true);
+      
+      // Get current tab
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      // Check if we're on LinkedIn messaging
+      if (!tab.url.includes('linkedin.com')) {
+        showStatus('error', 'Please navigate to LinkedIn messaging to extract conversations');
+        return;
+      }
+      
+      // Send message to content script to extract conversations
+      const response = await chrome.tabs.sendMessage(tab.id, {
+        action: 'extractLinkedInConversations'
+      });
+
+      if (response && response.conversations && response.conversations.length > 0) {
+        currentConversations = response.conversations;
+        showConversationList(response.conversations);
+        messageContextSection.classList.remove('hidden');
+        showStatus('success', `Found ${response.conversations.length} active conversations`);
+      } else {
+        showStatus('info', 'No active conversations found. Please open LinkedIn messaging and try again.');
+      }
+      
+    } catch (error) {
+      console.error('Error extracting message context:', error);
+      showStatus('error', `Failed to extract conversations: ${error.message}`);
+    } finally {
+      setLoading(extractMessagesBtn, false);
+    }
+  }
+
+  function showConversationList(conversations) {
+    conversationItems.innerHTML = '';
+    
+    conversations.forEach((conversation, index) => {
+      const item = document.createElement('div');
+      item.className = 'conversation-item';
+      item.innerHTML = `
+        <div class="person-name">${conversation.personName}</div>
+        <div class="last-message">${conversation.lastMessage || 'No recent messages'}</div>
+      `;
+      
+      item.addEventListener('click', () => openChatInterface(conversation, index));
+      conversationItems.appendChild(item);
+    });
+    
+    conversationList.classList.remove('hidden');
+  }
+
+  async function openChatInterface(conversation, index) {
+    selectedConversation = conversation;
+    chatPersonName.textContent = `Chat with ${conversation.personName}`;
+    
+    // Hide conversation list and show chat interface
+    conversationList.classList.add('hidden');
+    chatInterface.classList.remove('hidden');
+    
+    // Load conversation history
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const response = await chrome.tabs.sendMessage(tab.id, {
+        action: 'getConversationHistory',
+        conversationIndex: index
+      });
+
+      if (response && response.messages) {
+        displayConversationHistory(response.messages);
+      }
+    } catch (error) {
+      console.error('Error loading conversation history:', error);
+      conversationHistory.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">Could not load conversation history</div>';
+    }
+  }
+
+  function displayConversationHistory(messages) {
+    conversationHistory.innerHTML = '';
+    
+    messages.forEach(message => {
+      const bubble = document.createElement('div');
+      bubble.className = `message-bubble ${message.isSent ? 'sent' : 'received'}`;
+      bubble.textContent = message.content;
+      conversationHistory.appendChild(bubble);
+    });
+    
+    // Scroll to bottom
+    conversationHistory.scrollTop = conversationHistory.scrollHeight;
+  }
+
+  function closeChatInterface() {
+    chatInterface.classList.add('hidden');
+    conversationList.classList.remove('hidden');
+    selectedConversation = null;
+    draftMessageInput.value = '';
+  }
+
+  async function generateContextualMessage() {
+    if (!selectedConversation) {
+      showStatus('error', 'No conversation selected');
+      return;
+    }
+
+    try {
+      setLoading(generateMessageBtn, true);
+      
+      // Get conversation history for context
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const historyResponse = await chrome.tabs.sendMessage(tab.id, {
+        action: 'getConversationHistory',
+        conversationIndex: currentConversations.indexOf(selectedConversation)
+      });
+
+      const response = await chrome.runtime.sendMessage({
+        action: 'generateContextualMessage',
+        data: {
+          personName: selectedConversation.personName,
+          conversationHistory: historyResponse?.messages || [],
+          context: 'professional_networking'
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      // Show generated message in the draft input
+      draftMessageInput.value = response.message;
+      showStatus('success', 'Contextual message generated successfully');
+      
+    } catch (error) {
+      console.error('Error generating contextual message:', error);
+      showStatus('error', `Failed to generate message: ${error.message}`);
+    } finally {
+      setLoading(generateMessageBtn, false);
+    }
+  }
+
+  async function rewriteDraftMessage() {
+    const draftMessage = draftMessageInput.value.trim();
+    
+    if (!draftMessage) {
+      showStatus('error', 'Please enter a message to rewrite');
+      return;
+    }
+
+    if (!selectedConversation) {
+      showStatus('error', 'No conversation selected');
+      return;
+    }
+
+    try {
+      setLoading(rewriteDraftBtn, true);
+      
+      // Get conversation history for context
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const historyResponse = await chrome.tabs.sendMessage(tab.id, {
+        action: 'getConversationHistory',
+        conversationIndex: currentConversations.indexOf(selectedConversation)
+      });
+
+      const response = await chrome.runtime.sendMessage({
+        action: 'rewriteMessage',
+        data: {
+          draftMessage,
+          conversationContext: historyResponse?.messages || [],
+          targetProfile: { personName: selectedConversation.personName }
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      // Show rewritten options
+      showGeneratedContent('Rewritten Message Options', response.options, 'messages');
+      showStatus('success', 'Message rewritten successfully');
+      
+    } catch (error) {
+      console.error('Error rewriting message:', error);
+      showStatus('error', `Failed to rewrite message: ${error.message}`);
+    } finally {
+      setLoading(rewriteDraftBtn, false);
     }
   }
 

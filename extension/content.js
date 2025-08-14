@@ -2,7 +2,7 @@
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Content script received message:', request);
+  console.log('📨 Content script received message:', request.action);
   
   if (request.action === 'extractPageData') {
     extractPageData(request.url, request.title)
@@ -18,9 +18,42 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   
   if (request.action === 'getConversationContext') {
-    getLinkedInConversationContext()
-      .then(context => sendResponse({ context }))
-      .catch(error => sendResponse({ context: null, error: error.message }));
+    try {
+      const context = getLinkedInConversationContext();
+      sendResponse({ context });
+    } catch (error) {
+      sendResponse({ context: null, error: error.message });
+    }
+    return true;
+  }
+  
+  if (request.action === 'extractLinkedInConversations') {
+    console.log('🔍 Starting conversation extraction...');
+    console.log('Current URL:', window.location.href);
+    console.log('Page title:', document.title);
+    
+    try {
+      const conversations = extractLinkedInConversations();
+      console.log('✅ Extraction successful:', conversations);
+      sendResponse({ conversations });
+    } catch (error) {
+      console.error('❌ Extraction failed:', error);
+      sendResponse({ conversations: [], error: error.message });
+    }
+    return true;
+  }
+  
+  if (request.action === 'getConversationHistory') {
+    console.log('📜 Starting history extraction for index:', request.conversationIndex);
+    
+    try {
+      const messages = getConversationHistory(request.conversationIndex);
+      console.log('✅ History extraction successful:', messages.length, 'messages');
+      sendResponse({ messages });
+    } catch (error) {
+      console.error('❌ History extraction failed:', error);
+      sendResponse({ messages: [], error: error.message });
+    }
     return true;
   }
 });
@@ -511,6 +544,236 @@ function getLinkedInConversationContext() {
   } catch (error) {
     console.error('Error extracting conversation context:', error);
     return null;
+  }
+}
+
+function extractLinkedInConversations() {
+  try {
+    console.log('🔍 Extracting LinkedIn conversations...');
+    
+    if (!window.location.href.includes('linkedin.com')) {
+      throw new Error('Not on LinkedIn');
+    }
+
+    const conversations = [];
+    
+    // First, check for messaging popup/overlay (your case)
+    const messagingPopup = document.querySelector('.msg-overlay-conversation-bubble-header');
+    if (messagingPopup) {
+      console.log('📱 Found messaging popup/overlay');
+      
+      // Extract person name from popup header
+      const headerTitle = messagingPopup.querySelector('.msg-overlay-bubble-header__title');
+      if (headerTitle) {
+        const personNameLink = headerTitle.querySelector('a .hoverable-link-text');
+        if (personNameLink) {
+          const personName = personNameLink.textContent.trim();
+          
+          // Get the last message from the conversation
+          const messageList = document.querySelector('.msg-s-message-list-content');
+          let lastMessage = 'Active conversation';
+          
+          if (messageList) {
+            const lastMessageEvent = messageList.querySelector('.msg-s-message-list__event:last-child .msg-s-event-listitem__body');
+            if (lastMessageEvent) {
+              lastMessage = lastMessageEvent.textContent.trim().substring(0, 100) + '...';
+            }
+          }
+          
+          conversations.push({
+            personName: personName,
+            lastMessage: lastMessage,
+            isActiveConversation: true,
+            isPopup: true
+          });
+          
+          console.log(`✅ Found conversation with: ${personName}`);
+        }
+      }
+    }
+    
+    // Check if we're in the main messaging interface
+    if (conversations.length === 0) {
+      const messageList = document.querySelector('.msg-s-message-list');
+      if (messageList) {
+        console.log('📱 Found main messaging interface');
+        
+        // Extract participant names from message headers
+        const messageItems = document.querySelectorAll('.msg-s-event-listitem');
+        const participantNames = new Set();
+        
+        messageItems.forEach(item => {
+          const nameEl = item.querySelector('.msg-s-message-group__name');
+          if (nameEl && nameEl.textContent.trim()) {
+            const name = nameEl.textContent.trim();
+            // Filter out current user (Venkatesh S)
+            if (name && !name.includes('Venkatesh S')) {
+              participantNames.add(name);
+            }
+          }
+        });
+        
+        // Get the last message for context
+        const lastMessageEl = document.querySelector('.msg-s-event-listitem:last-child .msg-s-event-listitem__body');
+        const lastMessage = lastMessageEl ? lastMessageEl.textContent.trim().substring(0, 100) + '...' : 'Active conversation';
+        
+        // Add each participant as a conversation
+        participantNames.forEach(name => {
+          conversations.push({
+            personName: name,
+            lastMessage: lastMessage,
+            isActiveConversation: true
+          });
+        });
+      }
+    }
+    
+    // Fallback: try to find conversation list
+    if (conversations.length === 0) {
+      const conversationSelectors = [
+        '.msg-conversations-container__conversations-list .msg-conversation-listitem',
+        '.msg-conversations-container__pillar .msg-conversation-listitem',
+        '.msg-conversations-container .msg-conversation-card',
+        '.msg-conversations-container .conversation-item'
+      ];
+      
+      let conversationElements = [];
+      
+      for (const selector of conversationSelectors) {
+        conversationElements = document.querySelectorAll(selector);
+        if (conversationElements.length > 0) {
+          console.log(`✅ Found ${conversationElements.length} conversations using selector: ${selector}`);
+          break;
+        }
+      }
+      
+      if (conversationElements.length > 0) {
+        Array.from(conversationElements).slice(0, 10).forEach((element, index) => {
+          try {
+            const nameSelectors = [
+              '.msg-conversation-listitem__participant-names',
+              '.msg-conversation-card__participant-names',
+              '.msg-entity-lockup__entity-title',
+              '.msg-conversation-listitem__link .t-14'
+            ];
+            
+            let personName = '';
+            for (const selector of nameSelectors) {
+              const nameEl = element.querySelector(selector);
+              if (nameEl && nameEl.textContent.trim()) {
+                personName = nameEl.textContent.trim();
+                break;
+              }
+            }
+            
+            const messageSelectors = [
+              '.msg-conversation-listitem__summary',
+              '.msg-conversation-card__summary',
+              '.msg-conversation-listitem__message-snippet'
+            ];
+            
+            let lastMessage = '';
+            for (const selector of messageSelectors) {
+              const messageEl = element.querySelector(selector);
+              if (messageEl && messageEl.textContent.trim()) {
+                lastMessage = messageEl.textContent.trim();
+                break;
+              }
+            }
+            
+            if (personName) {
+              conversations.push({
+                personName,
+                lastMessage: lastMessage || 'No recent messages',
+                element: element,
+                index: index
+              });
+            }
+          } catch (error) {
+            console.error('Error extracting conversation:', error);
+          }
+        });
+      }
+    }
+    
+    if (conversations.length === 0) {
+      throw new Error('No conversations found. Please open LinkedIn messaging popup or navigate to a conversation.');
+    }
+    
+    console.log('💬 Extracted conversations:', conversations);
+    return conversations;
+    
+  } catch (error) {
+    console.error('❌ Error extracting LinkedIn conversations:', error);
+    throw error;
+  }
+}
+
+function getConversationHistory(conversationIndex) {
+  try {
+    console.log('📜 Getting conversation history for index:', conversationIndex);
+    
+    const messages = [];
+    
+    // Look for the message list container
+    const messageList = document.querySelector('.msg-s-message-list-content');
+    if (!messageList) {
+      console.log('❌ No message list found');
+      return [];
+    }
+    
+    // Get all message events
+    const messageEvents = messageList.querySelectorAll('.msg-s-message-list__event');
+    console.log(`📨 Found ${messageEvents.length} message events`);
+    
+    Array.from(messageEvents).forEach(eventEl => {
+      try {
+        // Skip time headers and other non-message elements
+        if (eventEl.querySelector('.msg-s-message-list__time-heading')) {
+          return;
+        }
+        
+        // Get the message item within the event
+        const messageItem = eventEl.querySelector('.msg-s-event-listitem');
+        if (!messageItem) return;
+        
+        // Get sender name
+        const senderNameEl = messageItem.querySelector('.msg-s-message-group__name');
+        const senderName = senderNameEl ? senderNameEl.textContent.trim() : 'Unknown';
+        
+        // Determine if message was sent by current user (Venkatesh S)
+        const isSent = senderName.includes('Venkatesh S');
+        
+        // Get message content
+        const contentEl = messageItem.querySelector('.msg-s-event-listitem__body');
+        if (!contentEl) return;
+        
+        const content = contentEl.textContent.trim();
+        if (!content) return;
+        
+        // Get timestamp
+        const timestampEl = messageItem.querySelector('.msg-s-message-group__timestamp');
+        const timestamp = timestampEl ? timestampEl.textContent.trim() : new Date().toISOString();
+        
+        messages.push({
+          content,
+          isSent,
+          sender: senderName,
+          timestamp: timestamp
+        });
+        
+      } catch (error) {
+        console.error('Error extracting individual message:', error);
+      }
+    });
+    
+    // Sort messages by their DOM order (chronological)
+    console.log(`📜 Extracted ${messages.length} messages from conversation`);
+    return messages;
+    
+  } catch (error) {
+    console.error('❌ Error getting conversation history:', error);
+    return [];
   }
 }
 
