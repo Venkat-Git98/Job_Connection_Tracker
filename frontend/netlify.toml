@@ -9,9 +9,3 @@
   from = "/*"
   to = "/index.html"
   status = 200
-
-[context.production.environment]
-  VITE_API_BASE_URL = "https://your-railway-app.railway.app/api"
-
-[context.deploy-preview.environment]
-  VITE_API_BASE_URL = "https://your-railway-app.railway.app/api"
