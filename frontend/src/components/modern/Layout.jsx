@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTheme } from '../../contexts/ThemeContext'
 import ThemeToggle from './ThemeToggle'
-import StatusIndicator from './StatusIndicator'
 
 const Layout = ({ children }) => {
   const location = useLocation()
@@ -22,36 +21,26 @@ const Layout = ({ children }) => {
     {
       path: '/',
       label: 'Dashboard',
-      icon: '🏠',
-      description: 'Overview & Insights',
       gradient: 'var(--gradient-primary)'
     },
     { 
       path: '/connections', 
-      label: 'Connections', 
-      icon: '🤝',
-      description: 'LinkedIn Network',
+      label: 'Connections',
       gradient: 'var(--gradient-secondary)'
     },
     { 
       path: '/jobs', 
-      label: 'Jobs', 
-      icon: '💼',
-      description: 'Applications & Tracking',
+      label: 'Jobs',
       gradient: 'var(--gradient-success)'
     },
     { 
       path: '/companies', 
-      label: 'Companies', 
-      icon: '🏢',
-      description: 'Organizations & People',
+      label: 'Companies',
       gradient: 'var(--gradient-warning)'
     },
     { 
       path: '/analytics', 
-      label: 'Analytics', 
-      icon: '📊',
-      description: 'Performance Metrics',
+      label: 'Analytics',
       gradient: 'var(--gradient-danger)'
     },
   ]
@@ -63,13 +52,20 @@ const Layout = ({ children }) => {
         <div className="header-container">
           {/* Brand */}
           <div className="header-brand">
-            <div className="brand-logo animate-float">
-              <div className="logo-icon">🚀</div>
-              <div className="logo-pulse"></div>
+            <div className="brand-logo">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <rect width="40" height="40" rx="8" fill="url(#gradient)"/>
+                <path d="M12 28V16H16V28H12ZM14 14C13.2 14 12.5 13.7 12 13.2C11.5 12.7 11.2 12 11.2 11.2C11.2 10.4 11.5 9.7 12 9.2C12.5 8.7 13.2 8.4 14 8.4C14.8 8.4 15.5 8.7 16 9.2C16.5 9.7 16.8 10.4 16.8 11.2C16.8 12 16.5 12.7 16 13.2C15.5 13.7 14.8 14 14 14ZM20 28V21.5C20 20.1 20.6 19 22 19C23.4 19 24 20.1 24 21.5V28H28V20.5C28 17.5 26.5 16 24 16C22.5 16 21.2 16.8 20.5 18H20V16H16V28H20Z" fill="white"/>
+                <defs>
+                  <linearGradient id="gradient" x1="0" y1="0" x2="40" y2="40">
+                    <stop stopColor="#6366f1"/>
+                    <stop offset="1" stopColor="#8b5cf6"/>
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
             <div className="brand-content">
-              <h1 className="brand-title">LinkedIn Job Tracker</h1>
-              <p className="brand-subtitle">AI-Powered Career Intelligence</p>
+              <h1 className="brand-title">CareerTracker</h1>
             </div>
           </div>
 
@@ -86,11 +82,7 @@ const Layout = ({ children }) => {
                     background: isActive ? item.gradient : 'transparent'
                   }}
                 >
-                  <span className="nav-icon">{item.icon}</span>
-                  <div className="nav-content">
-                    <span className="nav-label">{item.label}</span>
-                    <span className="nav-description">{item.description}</span>
-                  </div>
+                  <span className="nav-label">{item.label}</span>
                   {isActive && <div className="nav-indicator"></div>}
                 </Link>
               )
@@ -99,7 +91,6 @@ const Layout = ({ children }) => {
 
           {/* Header Actions */}
           <div className="header-actions">
-            <StatusIndicator />
             <ThemeToggle />
             <button
               className="mobile-menu-toggle"
@@ -124,11 +115,7 @@ const Layout = ({ children }) => {
                   className={`nav-mobile-link ${isActive ? 'nav-mobile-link-active' : ''}`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  <span className="nav-icon">{item.icon}</span>
-                  <div className="nav-content">
-                    <span className="nav-label">{item.label}</span>
-                    <span className="nav-description">{item.description}</span>
-                  </div>
+                  <span className="nav-label">{item.label}</span>
                 </Link>
               )
             })}
@@ -145,26 +132,7 @@ const Layout = ({ children }) => {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="footer-container">
-          <div className="footer-content">
-            <div className="footer-brand">
-              <div className="footer-logo">🚀</div>
-              <div className="footer-info">
-                <p className="footer-title">LinkedIn Job Tracker</p>
-                <p className="footer-subtitle">© 2024 - AI-Powered Career Management</p>
-              </div>
-            </div>
-            <div className="footer-badges">
-              <span className="footer-badge">React + Vite</span>
-              <span className="footer-badge">Node.js + Express</span>
-              <span className="footer-badge">Gemini AI</span>
-              <span className="footer-badge">PostgreSQL</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+
 
       <style jsx>{`
         .layout {
@@ -208,38 +176,10 @@ const Layout = ({ children }) => {
         }
 
         .brand-logo {
-          position: relative;
-          width: 56px;
-          height: 56px;
           display: flex;
           align-items: center;
           justify-content: center;
-        }
-
-        .logo-icon {
-          width: 56px;
-          height: 56px;
-          background: var(--gradient-primary);
-          border-radius: var(--radius-2xl);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 28px;
-          box-shadow: var(--shadow-lg);
-          position: relative;
-          z-index: 2;
-        }
-
-        .logo-pulse {
-          position: absolute;
-          top: -4px;
-          left: -4px;
-          right: -4px;
-          bottom: -4px;
-          background: var(--gradient-primary);
-          border-radius: var(--radius-2xl);
-          opacity: 0.3;
-          animation: pulse 3s ease-in-out infinite;
+          flex-shrink: 0;
         }
 
         .brand-content {
@@ -248,24 +188,12 @@ const Layout = ({ children }) => {
         }
 
         .brand-title {
-          font-size: var(--text-2xl);
-          font-weight: 900;
-          background: var(--gradient-primary);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          font-size: var(--text-xl);
+          font-weight: 700;
+          color: var(--text-primary);
           line-height: var(--leading-tight);
           margin: 0;
           letter-spacing: var(--tracking-tight);
-        }
-
-        .brand-subtitle {
-          font-size: var(--text-sm);
-          color: var(--text-muted);
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: var(--tracking-wider);
-          margin: 0;
         }
 
         /* Desktop Navigation */
@@ -280,9 +208,8 @@ const Layout = ({ children }) => {
         .nav-link {
           display: flex;
           align-items: center;
-          gap: var(--space-3);
-          padding: var(--space-3) var(--space-4);
-          border-radius: var(--radius-2xl);
+          padding: var(--space-3) var(--space-5);
+          border-radius: var(--radius-xl);
           text-decoration: none;
           color: var(--text-secondary);
           font-weight: 600;
@@ -327,28 +254,9 @@ const Layout = ({ children }) => {
           box-shadow: var(--shadow-xl);
         }
 
-        .nav-icon {
-          font-size: var(--text-xl);
-          flex-shrink: 0;
-        }
-
-        .nav-content {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-        }
-
         .nav-label {
           font-weight: 700;
           line-height: 1;
-        }
-
-        .nav-description {
-          font-size: var(--text-xs);
-          opacity: 0.8;
-          font-weight: 500;
-          line-height: 1;
-          margin-top: 2px;
         }
 
         .nav-indicator {
@@ -408,6 +316,7 @@ const Layout = ({ children }) => {
           transform: translateY(-100%);
           opacity: 0;
           transition: var(--transition-normal);
+          z-index: 50;
         }
 
         .nav-mobile-open {
@@ -425,9 +334,8 @@ const Layout = ({ children }) => {
         .nav-mobile-link {
           display: flex;
           align-items: center;
-          gap: var(--space-3);
           padding: var(--space-4);
-          border-radius: var(--radius-2xl);
+          border-radius: var(--radius-xl);
           text-decoration: none;
           color: var(--text-secondary);
           font-weight: 600;
@@ -463,80 +371,7 @@ const Layout = ({ children }) => {
           min-height: 60vh;
         }
 
-        /* Footer */
-        .footer {
-          background: var(--bg-glass);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border-top: 1px solid var(--border-primary);
-          margin-top: auto;
-        }
 
-        .footer-container {
-          max-width: var(--content-max-width);
-          margin: 0 auto;
-          padding: var(--space-8) var(--space-6);
-        }
-
-        .footer-content {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: var(--space-6);
-        }
-
-        .footer-brand {
-          display: flex;
-          align-items: center;
-          gap: var(--space-4);
-        }
-
-        .footer-logo {
-          width: 40px;
-          height: 40px;
-          background: var(--gradient-primary);
-          border-radius: var(--radius-xl);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 20px;
-        }
-
-        .footer-info {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .footer-title {
-          font-size: var(--text-base);
-          font-weight: 700;
-          color: var(--text-primary);
-          margin: 0;
-        }
-
-        .footer-subtitle {
-          font-size: var(--text-sm);
-          color: var(--text-muted);
-          margin: 0;
-        }
-
-        .footer-badges {
-          display: flex;
-          gap: var(--space-2);
-          flex-wrap: wrap;
-        }
-
-        .footer-badge {
-          padding: var(--space-1) var(--space-3);
-          background: var(--bg-glass-light);
-          border: 1px solid var(--border-primary);
-          border-radius: var(--radius-full);
-          font-size: var(--text-xs);
-          color: var(--text-muted);
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: var(--tracking-wide);
-        }
 
         /* Responsive Design */
         @media (max-width: 1024px) {
@@ -582,31 +417,9 @@ const Layout = ({ children }) => {
             padding: 0 var(--space-4);
           }
 
-          .footer-content {
-            flex-direction: column;
-            text-align: center;
-            gap: var(--space-4);
-          }
-
-          .footer-badges {
-            justify-content: center;
-          }
-        }
-
         @media (max-width: 480px) {
           .header-container {
             padding: var(--space-2) var(--space-3);
-          }
-
-          .brand-logo {
-            width: 48px;
-            height: 48px;
-          }
-
-          .logo-icon {
-            width: 48px;
-            height: 48px;
-            font-size: 24px;
           }
 
           .brand-title {

@@ -80,9 +80,9 @@ export const apiService = {
   getDashboardAnalytics: (timeRange = '30d') => 
     api.get('/analytics/dashboard', { params: { timeRange } }),
   getPerformanceMetrics: () => api.get('/analytics/performance'),
-  getDashboardStats: () => api.get('/analytics/dashboard-stats'),
-  getRecentActivity: () => api.get('/analytics/recent-activity'),
-  getAnalytics: (params = {}) => api.get('/analytics', { params }),
+  getDashboardStats: () => api.get('/analytics/dashboard'),
+  getRecentActivity: () => api.get('/analytics/dashboard'),
+  getAnalytics: (params = {}) => api.get('/analytics/dashboard', { params }),
 
   // Health check
   healthCheck: () => api.get('/health', { baseURL: API_BASE_URL.replace('/api', '') }),

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/modern/Layout'
 import Dashboard from './components/modern/Dashboard'
@@ -8,24 +8,8 @@ import CompaniesHub from './components/modern/CompaniesHub'
 import AnalyticsHub from './components/modern/AnalyticsHub'
 import { ToastProvider } from './contexts/ToastContext'
 import { ThemeProvider } from './contexts/ThemeContext'
-import LoadingScreen from './components/modern/LoadingScreen'
 
 function App() {
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    // Simulate app initialization
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 2000)
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  if (isLoading) {
-    return <LoadingScreen />
-  }
-
   return (
     <ThemeProvider>
       <ToastProvider>

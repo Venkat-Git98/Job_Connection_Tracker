@@ -18,12 +18,8 @@ const QuickActions = ({ onRefresh }) => {
   }
 
   const handleExtensionGuide = () => {
-    showInfo('Chrome extension guide opened in new tab')
-    window.open('/extension-guide', '_blank')
-  }
-
-  const handleAPIStatus = () => {
-    window.open('http://localhost:3001/health', '_blank')
+    showInfo('Opening Chrome Web Store to install extension')
+    window.open('https://chrome.google.com/webstore', '_blank')
   }
 
   return (
@@ -49,17 +45,9 @@ const QuickActions = ({ onRefresh }) => {
       <button
         onClick={handleExtensionGuide}
         className="btn btn-secondary"
-        title="Learn how to use the Chrome extension"
+        title="Get Chrome extension"
       >
-        🧩 Extension Guide
-      </button>
-
-      <button
-        onClick={handleAPIStatus}
-        className="btn btn-ghost"
-        title="Check API health status"
-      >
-        📊 API Status
+        Get Extension
       </button>
 
       <style jsx>{`
