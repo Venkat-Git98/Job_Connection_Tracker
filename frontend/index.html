@@ -1,13 +1,172 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LinkedIn Job Tracker Dashboard</title>
+    <meta name="description" content="AI-powered LinkedIn job tracking and networking platform for modern professionals" />
+    <meta name="keywords" content="LinkedIn, job tracking, networking, AI, career management, job search" />
+    <meta name="author" content="Venkat - ML Engineer" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://linkedin-job-tracker.com/" />
+    <meta property="og:title" content="LinkedIn Job Tracker - AI-Powered Career Intelligence" />
+    <meta property="og:description" content="Track LinkedIn connections, job applications, and networking opportunities with AI-powered insights" />
+    <meta property="og:image" content="/og-image.png" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://linkedin-job-tracker.com/" />
+    <meta property="twitter:title" content="LinkedIn Job Tracker - AI-Powered Career Intelligence" />
+    <meta property="twitter:description" content="Track LinkedIn connections, job applications, and networking opportunities with AI-powered insights" />
+    <meta property="twitter:image" content="/og-image.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#6366f1">
+
+    <title>LinkedIn Job Tracker - AI-Powered Career Intelligence</title>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/src/index.css" as="style">
+    
+    <!-- Critical CSS for initial render -->
+    <style>
+      /* Critical loading styles */
+      #root {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #0a0a0f 0%, #111827 100%);
+        color: #f8fafc;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+      
+      .initial-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #0a0a0f 0%, #111827 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.5s ease-out;
+      }
+      
+      .loader-content {
+        text-align: center;
+        animation: fadeInUp 0.8s ease-out;
+      }
+      
+      .loader-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+        margin: 0 auto 24px;
+        animation: float 3s ease-in-out infinite;
+        box-shadow: 0 0 40px rgba(99, 102, 241, 0.4);
+      }
+      
+      .loader-text {
+        font-size: 24px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 8px;
+        letter-spacing: -0.02em;
+      }
+      
+      .loader-subtitle {
+        font-size: 14px;
+        color: #94a3b8;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      
+      .loader-progress {
+        width: 200px;
+        height: 4px;
+        background: rgba(99, 102, 241, 0.2);
+        border-radius: 2px;
+        margin: 24px auto 0;
+        overflow: hidden;
+      }
+      
+      .loader-progress-bar {
+        height: 100%;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        border-radius: 2px;
+        animation: progress 2s ease-in-out infinite;
+      }
+      
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      
+      @keyframes progress {
+        0% { width: 0%; }
+        50% { width: 70%; }
+        100% { width: 100%; }
+      }
+    </style>
   </head>
   <body>
+    <!-- Initial Loading Screen -->
+    <div id="initial-loader" class="initial-loader">
+      <div class="loader-content">
+        <div class="loader-icon">🚀</div>
+        <div class="loader-text">LinkedIn Job Tracker</div>
+        <div class="loader-subtitle">AI-Powered Career Intelligence</div>
+        <div class="loader-progress">
+          <div class="loader-progress-bar"></div>
+        </div>
+      </div>
+    </div>
+    
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Remove loader after app loads -->
+    <script>
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const loader = document.getElementById('initial-loader');
+          if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.remove(), 500);
+          }
+        }, 1500);
+      });
+    </script>
   </body>
 </html>

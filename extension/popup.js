@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const rewriteBtn = document.getElementById('rewriteBtn');
   const generatedContent = document.getElementById('generatedContent');
 
+
   let currentPageData = null;
 
   // Load last extraction data
@@ -227,34 +228,58 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function showGeneratedContent(title, content, type) {
-    let html = '';
+    // Clear previous content
+    generatedContent.innerHTML = '';
     
     if (type === 'connection') {
-      html += `
-        <div class="generated-content">
-          <div class="content-header">✨ ${title}</div>
-          <div style="margin-bottom: 12px; color: #4a5568; line-height: 1.6;">${content}</div>
-          <button class="copy-btn" onclick="copyToClipboard('${content.replace(/'/g, "\\'")}')">
-            📋 Copy to Clipboard
-          </button>
-        </div>
-      `;
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'generated-content';
+      
+      const headerDiv = document.createElement('div');
+      headerDiv.className = 'content-header';
+      headerDiv.innerHTML = `✨ ${title}`;
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.style.cssText = 'margin-bottom: 12px; color: #4a5568; line-height: 1.6;';
+      messageDiv.textContent = content;
+      
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'copy-btn';
+      copyBtn.textContent = '📋 Copy to Clipboard';
+      copyBtn.addEventListener('click', () => copyToClipboard(content, copyBtn));
+      
+      contentDiv.appendChild(headerDiv);
+      contentDiv.appendChild(messageDiv);
+      contentDiv.appendChild(copyBtn);
+      generatedContent.appendChild(contentDiv);
+      
     } else if (type === 'messages' && Array.isArray(content)) {
       content.forEach((option, index) => {
         const optionTitle = option.type || `Option ${index + 1}`;
-        html += `
-          <div class="generated-content">
-            <div class="content-header">💬 ${optionTitle}</div>
-            <div style="margin-bottom: 12px; color: #4a5568; line-height: 1.6;">${option.message}</div>
-            <button class="copy-btn" onclick="copyToClipboard('${option.message.replace(/'/g, "\\'")}')">
-              📋 Copy to Clipboard
-            </button>
-          </div>
-        `;
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'generated-content';
+        
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'content-header';
+        headerDiv.innerHTML = `💬 ${optionTitle}`;
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.style.cssText = 'margin-bottom: 12px; color: #4a5568; line-height: 1.6;';
+        messageDiv.textContent = option.message;
+        
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.textContent = '📋 Copy to Clipboard';
+        copyBtn.addEventListener('click', () => copyToClipboard(option.message, copyBtn));
+        
+        contentDiv.appendChild(headerDiv);
+        contentDiv.appendChild(messageDiv);
+        contentDiv.appendChild(copyBtn);
+        generatedContent.appendChild(contentDiv);
       });
     }
     
-    generatedContent.innerHTML = html;
     generatedContent.classList.remove('hidden');
   }
 
@@ -268,14 +293,76 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Make copyToClipboard available globally
-  window.copyToClipboard = async function(text) {
+  // Copy to clipboard function with improved feedback
+  async function copyToClipboard(text, buttonElement) {
     try {
-      await navigator.clipboard.writeText(text);
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (!successful) {
+          throw new Error('Copy command failed');
+        }
+      }
+      
+      // Visual feedback on button
+      if (buttonElement) {
+        const originalText = buttonElement.textContent;
+        buttonElement.classList.add('copied');
+        buttonElement.textContent = '📋 Copied!';
+        
+        setTimeout(() => {
+          buttonElement.classList.remove('copied');
+          buttonElement.textContent = originalText;
+        }, 2000);
+      }
+      
       showStatus('success', 'Copied to clipboard!');
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
-      showStatus('error', 'Failed to copy to clipboard');
+      showStatus('error', 'Failed to copy to clipboard. Please select and copy manually.');
+      
+      // Show the text in a modal or alert as fallback
+      const fallbackDiv = document.createElement('div');
+      fallbackDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        z-index: 1000;
+        max-width: 90%;
+        word-wrap: break-word;
+      `;
+      fallbackDiv.innerHTML = `
+        <h4>Copy this text manually:</h4>
+        <textarea readonly style="width: 100%; height: 100px; margin: 10px 0;">${text}</textarea>
+        <button onclick="this.parentElement.remove()" style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+      `;
+      document.body.appendChild(fallbackDiv);
+      
+      // Auto-remove after 10 seconds
+      setTimeout(() => {
+        if (fallbackDiv.parentElement) {
+          fallbackDiv.remove();
+        }
+      }, 10000);
     }
-  };
+  }
 });

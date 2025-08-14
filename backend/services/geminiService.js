@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const profileService = require('./profileService');
 
 class GeminiService {
   constructor() {
@@ -8,18 +9,11 @@ class GeminiService {
     
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     this.model = this.genAI.getGenerativeModel({ 
-      model: process.env.GEMINI_MODEL || 'gemini-1.5-flash' 
+      model: process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp' 
     });
     
-    // Personal profile - customize this based on user
-    this.personalProfile = {
-      name: 'Venkat',
-      currentRole: 'Machine Learning Engineer',
-      experience: '4+ years in ML/AI',
-      skills: ['Deep Learning', 'Computer Vision', 'MLOps', 'Python', 'TensorFlow', 'PyTorch'],
-      motivation: 'Building real-world ML systems that create meaningful impact',
-      background: 'ML Engineer with strong experience in deep learning and computer vision; comfortable shipping production ML/AI'
-    };
+    // Get user profile from profile service
+    this.userProfile = profileService.getProfile();
   }
 
   async generateConnectionRequest(targetProfile) {
@@ -68,38 +62,74 @@ class GeminiService {
   }
 
   buildConnectionPrompt(targetProfile) {
-    const { personName, currentTitle, currentCompany, headline, about } = targetProfile;
+    const { personName, currentTitle, currentCompany, headline, about, location } = targetProfile;
+    const profile = this.userProfile;
     
-    return `You are helping me write a personalized LinkedIn connection request. Here's the context:
+    // Get contextually relevant information
+    const targetContext = `${currentTitle} ${currentCompany} ${headline} ${about}`.toLowerCase();
+    const connectionStrategy = profileService.getConnectionStrategy(currentCompany, currentTitle, null);
+    const relevantSkills = profileService.getRelevantSkills(targetContext);
+    const relevantAchievements = profileService.getRelevantAchievements(targetContext);
+    
+    return `You are helping Venkat write a highly personalized LinkedIn connection request. Analyze the target person's profile deeply and create a connection that shows genuine interest and relevant expertise.
 
-MY PROFILE:
-- Name: ${this.personalProfile.name} (always address me as Venkat in the message)
-- Role: ${this.personalProfile.currentRole}
-- Experience: ${this.personalProfile.experience}
-- Background: ${this.personalProfile.background}
-- Motivation: ${this.personalProfile.motivation}
+VENKAT'S PROFILE:
+- Name: Venkat (${profile.personalInfo.fullName}) - always use "Venkat" in messages
+- Role: ${profile.professional.currentRole}
+- Experience: ${profile.professional.experience}
+- Core Expertise: ${profile.professional.specializations.slice(0, 3).join(', ')}
+- Most Relevant Skills for this connection: ${relevantSkills.join(', ')}
+- Background: ${profile.personal.motivation}
+- Key Achievements: ${relevantAchievements.join('; ')}
+- Industry Focus: ${profile.professional.industries.join(', ')}
+- Connection Strategy: ${connectionStrategy}
 
-TARGET PERSON:
+TARGET PERSON ANALYSIS:
 - Name: ${personName || 'Unknown'}
 - Title: ${currentTitle || 'Unknown'}
 - Company: ${currentCompany || 'Unknown'}
+- Location: ${location || 'N/A'}
 - Headline: ${headline || 'N/A'}
-- About: ${about ? about.substring(0, 200) : 'N/A'}
+- About: ${about ? about.substring(0, 300) : 'N/A'}
 
-REQUIREMENTS:
-- Write a warm, genuine connection request under 300 characters
-- Be specific to their role/company, avoid generic buzzwords
-- Include a genuine hook or shared interest
-- Professional but personable tone
-- No hard asks, just connecting
-- Focus on mutual value or shared interests in ML/tech
-- Use details from my profile to make it specific (deep learning/computer vision, MLOps)
+DEEP PERSONALIZATION REQUIREMENTS:
+1. Research their company's mission/work and connect it to Venkat's ML/CV expertise
+2. Find specific overlaps between their role and Venkat's specializations
+3. Reference something concrete from their profile (company's tech stack, recent initiatives, industry challenges)
+4. Show genuine curiosity about their work and how Venkat's experience might be relevant
+5. Use the connection strategy to tailor the approach appropriately
+6. Keep under 300 characters but make every word meaningful
+7. Professional yet warm tone - peer-to-peer, not pitching or job seeking
+8. Include a subtle hook that invites conversation
+
+AVOID:
+- Generic networking language ("expand my network", "like-minded professionals")
+- Sales-y or promotional tone
+- Job searching implications
+- Vague compliments without substance
+- Overuse of buzzwords
+
+Write a connection request that demonstrates Venkat has researched their work and has genuinely relevant expertise to share. Focus on mutual professional value and authentic interest.
 
 Write only the connection request message, nothing else.`;
   }
 
   buildMessageRewritePrompt(draftMessage, conversationContext, targetProfile) {
-    let prompt = `You are helping me rewrite a LinkedIn message to be more professional and engaging.
+    const profile = this.userProfile;
+    const targetContext = targetProfile ? 
+      `${targetProfile.currentTitle} ${targetProfile.currentCompany} ${targetProfile.headline}`.toLowerCase() : '';
+    const relevantSkills = profileService.getRelevantSkills(targetContext);
+    
+    let prompt = `You are helping Venkat rewrite a LinkedIn message to be more professional and engaging, incorporating his ML engineering expertise naturally.
+
+VENKAT'S CONTEXT:
+- Name: Venkat (${profile.personalInfo.fullName}) - always use "Venkat"
+- Role: ${profile.professional.currentRole}
+- Experience: ${profile.professional.experience}
+- Core Expertise: ${profile.professional.specializations.slice(0, 2).join(', ')}
+- Relevant Skills: ${relevantSkills.join(', ')}
+- Communication Style: ${profile.communication.tone}
+- Values: ${profile.personal.values.slice(0, 3).join(', ')}
 
 ORIGINAL MESSAGE:
 "${draftMessage}"
@@ -114,27 +144,43 @@ ${conversationContext.map(msg => `${msg.speaker}: ${msg.content}`).join('\n')}
     }
 
     if (targetProfile) {
+      const connectionStrategy = profileService.getConnectionStrategy(
+        targetProfile.currentCompany, 
+        targetProfile.currentTitle, 
+        null
+      );
+      
       prompt += `TARGET PERSON CONTEXT:
 - Name: ${targetProfile.personName || 'Unknown'}
 - Title: ${targetProfile.currentTitle || 'Unknown'}
 - Company: ${targetProfile.currentCompany || 'Unknown'}
+- Background: ${targetProfile.headline || 'N/A'}
+- Connection Strategy: ${connectionStrategy}
 
 `;
     }
 
-    prompt += `Please provide 2 rewritten versions:
+    prompt += `Please provide 2 rewritten versions that naturally incorporate Venkat's expertise:
 
-1. PROFESSIONAL VERSION: More formal, concise, and business-focused
-2. WARM VERSION: Friendly, conversational, but still professional
+1. PROFESSIONAL VERSION: Formal, concise, business-focused with subtle technical credibility
+2. WARM VERSION: Friendly, conversational but professional, showing genuine interest and relevant experience
+
+REQUIREMENTS:
+- Always use "Venkat" as the name (never "I" or other names)
+- Naturally weave in relevant ML/AI expertise where it adds value
+- Show authentic interest in their work/company based on Venkat's background
+- Maintain the original intent while dramatically improving clarity and impact
+- Make it feel personal, researched, and thoughtful - not templated
+- Keep each version under 200 words
+- Use Venkat's communication style: professional yet approachable
+- If appropriate, reference how Venkat's experience relates to their work
 
 Format your response as:
 PROFESSIONAL:
 [rewritten message]
 
 WARM:
-[rewritten message]
-
-Keep each version under 200 words and maintain the original intent while improving clarity and professionalism.`;
+[rewritten message]`;
 
     return prompt;
   }
@@ -180,11 +226,12 @@ Keep each version under 200 words and maintain the original intent while improvi
   }
 
   updatePersonalProfile(profileData) {
-    this.personalProfile = { ...this.personalProfile, ...profileData };
+    profileService.updateProfile(profileData);
+    this.userProfile = profileService.getProfile();
   }
 
   getPersonalProfile() {
-    return this.personalProfile;
+    return this.userProfile;
   }
 }
 
