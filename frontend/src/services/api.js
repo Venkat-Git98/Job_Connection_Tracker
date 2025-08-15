@@ -14,6 +14,18 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    
+    // Add user context to requests (except for user management endpoints)
+    const isUserEndpoint = config.url?.startsWith('/users');
+    const isHealthCheck = config.url?.includes('/health');
+    
+    if (!isUserEndpoint && !isHealthCheck) {
+      const currentUserId = localStorage.getItem('currentUserId');
+      if (currentUserId) {
+        config.headers['X-User-ID'] = currentUserId;
+      }
+    }
+    
     return config;
   },
   (error) => {
@@ -36,6 +48,19 @@ api.interceptors.response.use(
 
 // API methods
 export const apiService = {
+  // Generic HTTP methods
+  get: (url, config = {}) => api.get(url, config),
+  post: (url, data = {}, config = {}) => api.post(url, data, config),
+  put: (url, data = {}, config = {}) => api.put(url, data, config),
+  delete: (url, config = {}) => api.delete(url, config),
+
+  // User Management
+  getUsers: () => api.get('/users'),
+  getUserById: (userId) => api.get(`/users/${userId}`),
+  createUser: (userData) => api.post('/users', userData),
+  updateUser: (userId, userData) => api.put(`/users/${userId}`, userData),
+  deleteUser: (userId) => api.delete(`/users/${userId}`),
+  updateUserActivity: (userId) => api.post(`/users/${userId}/activity`),
   // Connections
   getConnections: (params = {}) => api.get('/connections', { params }),
   updateConnectionStatus: (profileId, status) => 

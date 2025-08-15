@@ -1,7 +1,11 @@
 const pool = require('../config/database');
 
 class DatabaseService {
-  async upsertProfile(profileData) {
+  async upsertProfile(profileData, userId) {
+    if (!userId) {
+      throw new Error('User ID is required for profile operations');
+    }
+    
     const {
       personName,
       profileUrl,
@@ -15,10 +19,10 @@ class DatabaseService {
 
     const query = `
       INSERT INTO profiles (
-        person_name, profile_url, current_title, current_company, 
+        user_id, person_name, profile_url, current_title, current_company, 
         location, headline, about, experiences, last_seen_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
-      ON CONFLICT (profile_url) 
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
+      ON CONFLICT (user_id, profile_url) 
       DO UPDATE SET
         person_name = EXCLUDED.person_name,
         current_title = EXCLUDED.current_title,
@@ -32,6 +36,7 @@ class DatabaseService {
     `;
 
     const values = [
+      userId,
       personName,
       profileUrl,
       currentTitle,
@@ -46,7 +51,11 @@ class DatabaseService {
     return result.rows[0];
   }
 
-  async upsertJob(jobData) {
+  async upsertJob(jobData, userId) {
+    if (!userId) {
+      throw new Error('User ID is required for job operations');
+    }
+    
     const {
       jobTitle,
       companyName,
@@ -59,10 +68,10 @@ class DatabaseService {
 
     const query = `
       INSERT INTO jobs (
-        job_title, company_name, platform, job_url, 
+        user_id, job_title, company_name, platform, job_url, 
         location, posted_date, application_status, last_seen_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
-      ON CONFLICT (job_url)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
+      ON CONFLICT (user_id, job_url)
       DO UPDATE SET
         job_title = EXCLUDED.job_title,
         company_name = EXCLUDED.company_name,
@@ -74,6 +83,7 @@ class DatabaseService {
     `;
 
     const values = [
+      userId,
       jobTitle,
       companyName,
       platform,
@@ -87,18 +97,23 @@ class DatabaseService {
     return result.rows[0];
   }
 
-  async getProfiles(search = '', limit = 100, offset = 0) {
+  async getProfiles(userId, search = '', limit = 100, offset = 0) {
+    if (!userId) {
+      throw new Error('User ID is required for profile operations');
+    }
+
     let query = `
       SELECT p.*, o.connection_status, o.first_contact_date, o.last_contact_date,
              o.connection_request_text
       FROM profiles p
-      LEFT JOIN outreach o ON p.id = o.profile_id
+      LEFT JOIN outreach o ON p.id = o.profile_id AND o.user_id = $1
+      WHERE p.user_id = $1
     `;
     
-    const values = [];
+    const values = [userId];
     
     if (search) {
-      query += ` WHERE p.person_name ILIKE $1 OR p.current_company ILIKE $1`;
+      query += ` AND (p.person_name ILIKE $${values.length + 1} OR p.current_company ILIKE $${values.length + 1})`;
       values.push(`%${search}%`);
     }
     
@@ -109,12 +124,16 @@ class DatabaseService {
     return result.rows;
   }
 
-  async getJobs(status = '', limit = 100, offset = 0) {
-    let query = `SELECT * FROM jobs`;
-    const values = [];
+  async getJobs(userId, status = '', limit = 100, offset = 0) {
+    if (!userId) {
+      throw new Error('User ID is required for job operations');
+    }
+
+    let query = `SELECT * FROM jobs WHERE user_id = $1`;
+    const values = [userId];
     
     if (status) {
-      query += ` WHERE application_status = $1`;
+      query += ` AND application_status = $${values.length + 1}`;
       values.push(status);
     }
     
@@ -125,21 +144,29 @@ class DatabaseService {
     return result.rows;
   }
 
-  async updateJobStatus(jobUrl, status) {
+  async updateJobStatus(jobUrl, status, userId) {
+    if (!userId) {
+      throw new Error('User ID is required for job operations');
+    }
+
     const query = `
       UPDATE jobs 
       SET application_status = $1,
           applied_date = CASE WHEN $1 = 'applied' AND applied_date IS NULL THEN CURRENT_DATE ELSE applied_date END,
           last_seen_at = CURRENT_TIMESTAMP
-      WHERE job_url = $2
+      WHERE job_url = $2 AND user_id = $3
       RETURNING *;
     `;
 
-    const result = await pool.query(query, [status, jobUrl]);
+    const result = await pool.query(query, [status, jobUrl, userId]);
     return result.rows[0];
   }
 
-  async getOutreachByCompany() {
+  async getOutreachByCompany(userId) {
+    if (!userId) {
+      throw new Error('User ID is required for outreach operations');
+    }
+
     const query = `
       SELECT p.current_company, 
              json_agg(
@@ -153,53 +180,121 @@ class DatabaseService {
                )
              ) as profiles
       FROM profiles p
-      LEFT JOIN outreach o ON p.id = o.profile_id
-      WHERE p.current_company IS NOT NULL
+      LEFT JOIN outreach o ON p.id = o.profile_id AND o.user_id = $1
+      WHERE p.current_company IS NOT NULL AND p.user_id = $1
       GROUP BY p.current_company
       ORDER BY p.current_company;
     `;
 
-    const result = await pool.query(query);
+    const result = await pool.query(query, [userId]);
     return result.rows;
   }
 
-  async markJobAsApplied(jobUrl) {
+  async markJobAsApplied(jobUrl, userId) {
+    if (!userId) {
+      throw new Error('User ID is required for job operations');
+    }
+
     const query = `
       UPDATE jobs 
       SET application_status = 'applied', applied_date = CURRENT_DATE
-      WHERE job_url = $1
+      WHERE job_url = $1 AND user_id = $2
       RETURNING *;
     `;
 
-    const result = await pool.query(query, [jobUrl]);
+    const result = await pool.query(query, [jobUrl, userId]);
     return result.rows[0];
   }
 
-  async createOutreach(profileId, connectionRequestText) {
+  async createOutreach(profileId, connectionRequestText, userId) {
+    if (!userId) {
+      throw new Error('User ID is required for outreach operations');
+    }
+
     const query = `
-      INSERT INTO outreach (profile_id, first_contact_date, connection_request_text)
-      VALUES ($1, CURRENT_DATE, $2)
-      ON CONFLICT (profile_id)
+      INSERT INTO outreach (user_id, profile_id, first_contact_date, connection_request_text)
+      VALUES ($1, $2, CURRENT_DATE, $3)
+      ON CONFLICT (user_id, profile_id)
       DO UPDATE SET
         last_contact_date = CURRENT_DATE,
         connection_request_text = EXCLUDED.connection_request_text
       RETURNING *;
     `;
 
-    const result = await pool.query(query, [profileId, connectionRequestText]);
+    const result = await pool.query(query, [userId, profileId, connectionRequestText]);
     return result.rows[0];
   }
 
-  async updateConnectionStatus(profileId, status) {
+  async updateConnectionStatus(profileId, status, userId) {
+    if (!userId) {
+      throw new Error('User ID is required for outreach operations');
+    }
+
     const query = `
       UPDATE outreach 
       SET connection_status = $1, last_contact_date = CURRENT_DATE
-      WHERE profile_id = $2
+      WHERE profile_id = $2 AND user_id = $3
       RETURNING *;
     `;
 
-    const result = await pool.query(query, [status, profileId]);
+    const result = await pool.query(query, [status, profileId, userId]);
     return result.rows[0];
+  }
+
+  // New methods for user-specific analytics
+  async getUserAnalytics(userId, timeframe = '30d') {
+    if (!userId) {
+      throw new Error('User ID is required for analytics operations');
+    }
+
+    const timeCondition = this.getTimeCondition(timeframe);
+    
+    const query = `
+      SELECT 
+        (SELECT COUNT(*) FROM profiles WHERE user_id = $1) as total_profiles,
+        (SELECT COUNT(*) FROM jobs WHERE user_id = $1) as total_jobs,
+        (SELECT COUNT(*) FROM jobs WHERE user_id = $1 AND application_status = 'applied') as applied_jobs,
+        (SELECT COUNT(*) FROM outreach WHERE user_id = $1 AND connection_status = 'accepted') as accepted_connections,
+        (SELECT COUNT(*) FROM outreach WHERE user_id = $1 AND connection_status = 'requested') as pending_connections,
+        (SELECT COUNT(DISTINCT current_company) FROM profiles WHERE user_id = $1 AND current_company IS NOT NULL) as unique_companies
+    `;
+
+    const result = await pool.query(query, [userId]);
+    return result.rows[0];
+  }
+
+  async getUserRecentActivity(userId, limit = 10) {
+    if (!userId) {
+      throw new Error('User ID is required for activity operations');
+    }
+
+    const query = `
+      (SELECT 'profile' as type, person_name as title, current_company as subtitle, 
+              last_seen_at as timestamp, profile_url as url
+       FROM profiles WHERE user_id = $1)
+      UNION ALL
+      (SELECT 'job' as type, job_title as title, company_name as subtitle, 
+              last_seen_at as timestamp, job_url as url
+       FROM jobs WHERE user_id = $1)
+      ORDER BY timestamp DESC
+      LIMIT $2
+    `;
+
+    const result = await pool.query(query, [userId, limit]);
+    return result.rows;
+  }
+
+  getTimeCondition(timeframe) {
+    switch (timeframe) {
+      case '7d':
+        return "created_at >= CURRENT_DATE - INTERVAL '7 days'";
+      case '30d':
+        return "created_at >= CURRENT_DATE - INTERVAL '30 days'";
+      case '90d':
+        return "created_at >= CURRENT_DATE - INTERVAL '90 days'";
+      default:
+        return "created_at >= CURRENT_DATE - INTERVAL '30 days'";
+    }
   }
 }
 

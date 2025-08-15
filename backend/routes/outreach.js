@@ -5,7 +5,7 @@ const databaseService = require('../services/databaseService');
 // Get outreach data grouped by company
 router.get('/', async (req, res) => {
   try {
-    const companies = await databaseService.getOutreachByCompany();
+    const companies = await databaseService.getOutreachByCompany(req.user.id);
 
     // Format the response
     const formattedCompanies = companies.map(company => ({

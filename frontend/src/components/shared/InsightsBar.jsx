@@ -99,3 +99,4 @@ function buildSuggestions(analytics, performance) {
 export default InsightsBar;
 
 
+

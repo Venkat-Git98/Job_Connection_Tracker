@@ -1,7 +1,7 @@
 {
-  "name": "linkedin-job-tracker-frontend",
+  "name": "careertracker-frontend",
   "version": "1.0.0",
-  "description": "Dashboard for LinkedIn job tracker",
+  "description": "React dashboard for CareerTracker job search management",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -37,8 +37,11 @@ console.log('CORS allowed origins:', allowedCorsOrigins);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// User context middleware
+const { userContextMiddleware } = require('./middleware/userContext');
+
 // Routes
-app.use('/api', require('./routes/api'));
+app.use('/api', userContextMiddleware, require('./routes/api'));
 
 // Health check
 app.get('/health', (req, res) => {

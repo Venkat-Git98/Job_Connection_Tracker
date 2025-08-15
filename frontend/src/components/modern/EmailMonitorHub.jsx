@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { apiService } from '../../services/api'
 import { useToast } from '../../contexts/ToastContext'
+import { useUser } from '../../contexts/UserContext'
 import DataTable from '../shared/DataTable'
 import StatusBadge from '../shared/StatusBadge'
 
@@ -12,11 +13,83 @@ const EmailMonitorHub = () => {
   const [typeFilter, setTypeFilter] = useState('all')
   const [isMonitoring, setIsMonitoring] = useState(false)
   const { showSuccess, showError, showInfo } = useToast()
+  const { currentUser } = useUser()
+
+  // Check if current user has email access (only Venkat)
+  const hasEmailAccess = currentUser && (
+    currentUser.username === 'venkat' || 
+    currentUser.preferences?.email_access === true
+  )
 
   useEffect(() => {
-    loadEmailEvents()
-    loadMonitoringStatus()
-  }, [])
+    if (currentUser && hasEmailAccess) {
+      loadEmailEvents()
+      loadMonitoringStatus()
+    }
+  }, [currentUser, hasEmailAccess])
+
+  useEffect(() => {
+    if (currentUser && hasEmailAccess) {
+      loadEmailEvents()
+    }
+  }, [searchTerm, typeFilter])
+
+  // Show access denied message if user doesn't have email access
+  if (!hasEmailAccess) {
+    return (
+      <div className="email-access-denied">
+        <div className="access-denied-content">
+          <div className="access-denied-icon">🔒</div>
+          <h2>Email Access Restricted</h2>
+          <p>Email monitoring is only available for authorized users.</p>
+          <p>Contact the administrator if you need access to this feature.</p>
+        </div>
+
+        <style jsx>{`
+          .email-access-denied {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            padding: var(--space-8);
+          }
+
+          .access-denied-content {
+            text-align: center;
+            max-width: 500px;
+            padding: var(--space-8);
+            background: var(--bg-card);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-3xl);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+          }
+
+          .access-denied-icon {
+            font-size: 4rem;
+            margin-bottom: var(--space-4);
+          }
+
+          .access-denied-content h2 {
+            font-size: var(--text-2xl);
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: var(--space-3);
+          }
+
+          .access-denied-content p {
+            color: var(--text-muted);
+            margin-bottom: var(--space-2);
+            line-height: var(--leading-relaxed);
+          }
+
+          .access-denied-content p:last-child {
+            margin-bottom: 0;
+          }
+        `}</style>
+      </div>
+    )
+  }
 
   const loadEmailEvents = async () => {
     try {

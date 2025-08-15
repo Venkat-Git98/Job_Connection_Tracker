@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { apiService } from '../../services/api'
 import { useToast } from '../../contexts/ToastContext'
+import { useUser } from '../../contexts/UserContext'
 import DataTable from '../shared/DataTable'
 import StatusBadge from '../shared/StatusBadge'
 import ActionButtons from '../shared/ActionButtons'
@@ -12,11 +13,20 @@ const ConnectionsHub = () => {
   const [statusFilter, setStatusFilter] = useState('all')
   const [stats, setStats] = useState(null)
   const { showSuccess, showError } = useToast()
+  const { currentUser } = useUser()
 
   useEffect(() => {
-    loadConnections()
-    loadStats()
-  }, [])
+    if (currentUser) {
+      loadConnections()
+      loadStats()
+    }
+  }, [currentUser])
+
+  useEffect(() => {
+    if (currentUser) {
+      loadConnections()
+    }
+  }, [searchTerm, statusFilter])
 
   const loadConnections = async () => {
     try {

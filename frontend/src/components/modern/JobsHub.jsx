@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { apiService } from '../../services/api'
 import { useToast } from '../../contexts/ToastContext'
+import { useUser } from '../../contexts/UserContext'
 import DataTable from '../shared/DataTable'
 import StatusBadge from '../shared/StatusBadge'
 import ActionButtons from '../shared/ActionButtons'
@@ -12,10 +13,19 @@ const JobsHub = () => {
   const [statusFilter, setStatusFilter] = useState('all')
   const [platformFilter, setPlatformFilter] = useState('all')
   const { showSuccess, showError } = useToast()
+  const { currentUser } = useUser()
 
   useEffect(() => {
-    loadJobs()
-  }, [])
+    if (currentUser) {
+      loadJobs()
+    }
+  }, [currentUser])
+
+  useEffect(() => {
+    if (currentUser) {
+      loadJobs()
+    }
+  }, [searchTerm, statusFilter, platformFilter])
 
   const loadJobs = async () => {
     try {

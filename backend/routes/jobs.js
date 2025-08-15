@@ -22,7 +22,7 @@ router.post('/mark-applied', async (req, res) => {
     }
 
     // Mark job as applied in database
-    const updatedJob = await databaseService.markJobAsApplied(jobUrl);
+    const updatedJob = await databaseService.markJobAsApplied(jobUrl, req.user.id);
 
     if (!updatedJob) {
       return res.status(404).json({
@@ -124,7 +124,7 @@ router.get('/', async (req, res) => {
   try {
     const { status, limit = 100, offset = 0, search } = req.query;
 
-    const jobs = await databaseService.getJobs(status, parseInt(limit), parseInt(offset));
+    const jobs = await databaseService.getJobs(req.user.id, status, parseInt(limit), parseInt(offset));
 
     // Apply search filter if provided
     let filteredJobs = jobs;

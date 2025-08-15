@@ -285,17 +285,22 @@ function extractJobPosting(url) {
       applicationStatus: 'viewed'
     };
 
-    // LinkedIn Jobs - Updated selectors
+    // LinkedIn Jobs - Enhanced selectors with better fallbacks
     if (url.includes('linkedin.com/jobs/')) {
       console.log('🔍 Extracting LinkedIn job...');
       
-      // Try multiple selectors for job title
+      // Enhanced job title extraction with more selectors
       const titleSelectors = [
         '.top-card-layout__title',
         '.jobs-unified-top-card__job-title',
         '.job-details-jobs-unified-top-card__job-title',
         'h1[data-test-id="job-title"]',
         'h1.job-title',
+        '.jobs-search__job-title--link',
+        '.jobs-details__main-content h1',
+        '.job-details-jobs-unified-top-card__job-title-link',
+        'h1[class*="job-title"]',
+        'h1[class*="title"]',
         'h1'
       ];
       
@@ -308,13 +313,19 @@ function extractJobPosting(url) {
         }
       }
       
-      // Try multiple selectors for company name
+      // Enhanced company name extraction
       const companySelectors = [
         '.jobs-unified-top-card__company-name',
+        '.jobs-unified-top-card__company-name a',
         '.top-card-layout__card .top-card-layout__second-subline a',
         '.job-details-jobs-unified-top-card__company-name',
+        '.job-details-jobs-unified-top-card__company-name a',
         '[data-test-id="job-company"]',
-        '.company-name'
+        '.company-name',
+        '.jobs-search__job-company--link',
+        '.jobs-details__main-content .jobs-unified-top-card__company-name',
+        'a[class*="company"]',
+        '[class*="company-name"]'
       ];
       
       for (const selector of companySelectors) {
@@ -326,12 +337,157 @@ function extractJobPosting(url) {
         }
       }
       
-      // Try multiple selectors for location
+      // Enhanced location extraction
       const locationSelectors = [
         '.jobs-unified-top-card__bullet',
+        '.jobs-unified-top-card__primary-description',
         '.top-card-layout__card .top-card-layout__third-subline',
         '.job-details-jobs-unified-top-card__primary-description',
-        '[data-test-id="job-location"]'
+        '[data-test-id="job-location"]',
+        '.jobs-search__job-location',
+        '.jobs-details__main-content .jobs-unified-top-card__bullet',
+        '[class*="location"]'
+      ];
+      
+      for (const selector of locationSelectors) {
+        const locationEl = document.querySelector(selector);
+        if (locationEl && locationEl.textContent.trim()) {
+          const locationText = locationEl.textContent.trim();
+          // Filter out non-location text
+          if (!locationText.includes('applicant') && !locationText.includes('ago') && locationText.length > 2) {
+            data.location = locationText;
+            console.log('✅ Found location:', data.location);
+            break;
+          }
+        }
+      }
+
+      // Extract posted date if available
+      const dateSelectors = [
+        '.jobs-unified-top-card__posted-date',
+        '.job-details-jobs-unified-top-card__posted-date',
+        '[class*="posted"]'
+      ];
+      
+      for (const selector of dateSelectors) {
+        const dateEl = document.querySelector(selector);
+        if (dateEl && dateEl.textContent.trim()) {
+          data.postedDate = dateEl.textContent.trim();
+          console.log('✅ Found posted date:', data.postedDate);
+          break;
+        }
+      }
+    }
+    // Indeed - Enhanced extraction
+    else if (url.includes('indeed.com')) {
+      console.log('🔍 Extracting Indeed job...');
+      
+      const titleSelectors = [
+        '[data-jk] h1',
+        '.jobsearch-JobInfoHeader-title',
+        'h1[data-testid="jobTitle"]',
+        'h1.jobTitle',
+        '.jobsearch-JobInfoHeader-title span',
+        'h1[class*="jobTitle"]',
+        '.jobsearch-SerpJobCard h2 a span',
+        'h1'
+      ];
+      
+      for (const selector of titleSelectors) {
+        const titleEl = document.querySelector(selector);
+        if (titleEl && titleEl.textContent.trim()) {
+          data.jobTitle = titleEl.textContent.trim();
+          console.log('✅ Found job title:', data.jobTitle);
+          break;
+        }
+      }
+      
+      const companySelectors = [
+        '[data-testid="inlineHeader-companyName"]',
+        '[data-testid="inlineHeader-companyName"] a',
+        '.icl-u-lg-mr--sm',
+        '[data-testid="companyName"]',
+        '.companyName',
+        '.jobsearch-InlineCompanyRating + div a',
+        '.jobsearch-SerpJobCard .companyName',
+        'a[data-testid="company-name"]',
+        '[class*="companyName"]'
+      ];
+      
+      for (const selector of companySelectors) {
+        const companyEl = document.querySelector(selector);
+        if (companyEl && companyEl.textContent.trim()) {
+          data.companyName = companyEl.textContent.trim();
+          console.log('✅ Found company:', data.companyName);
+          break;
+        }
+      }
+      
+      const locationSelectors = [
+        '[data-testid="job-location"]',
+        '[data-testid="jobLocation"]',
+        '.icl-u-xs-mt--xs',
+        '.jobsearch-JobInfoHeader-subtitle div',
+        '.jobsearch-SerpJobCard .companyLocation',
+        '[class*="location"]'
+      ];
+      
+      for (const selector of locationSelectors) {
+        const locationEl = document.querySelector(selector);
+        if (locationEl && locationEl.textContent.trim()) {
+          const locationText = locationEl.textContent.trim();
+          // Filter out salary and other non-location text
+          if (!locationText.includes('$') && !locationText.includes('hour') && locationText.length > 2) {
+            data.location = locationText;
+            console.log('✅ Found location:', data.location);
+            break;
+          }
+        }
+      }
+    }
+    // Greenhouse - Enhanced extraction
+    else if (url.includes('greenhouse.io')) {
+      console.log('🔍 Extracting Greenhouse job...');
+      
+      const titleSelectors = [
+        '.app-title',
+        'h1.app-title',
+        'h1',
+        '.header h1',
+        '[class*="title"]'
+      ];
+      
+      for (const selector of titleSelectors) {
+        const titleEl = document.querySelector(selector);
+        if (titleEl && titleEl.textContent.trim()) {
+          data.jobTitle = titleEl.textContent.trim();
+          console.log('✅ Found job title:', data.jobTitle);
+          break;
+        }
+      }
+      
+      const companySelectors = [
+        '.company-name',
+        '.header .company',
+        '.header-company-name',
+        'a[class*="company"]',
+        '[class*="company-name"]'
+      ];
+      
+      for (const selector of companySelectors) {
+        const companyEl = document.querySelector(selector);
+        if (companyEl && companyEl.textContent.trim()) {
+          data.companyName = companyEl.textContent.trim();
+          console.log('✅ Found company:', data.companyName);
+          break;
+        }
+      }
+      
+      const locationSelectors = [
+        '.location',
+        '.app-location',
+        '.job-location',
+        '[class*="location"]'
       ];
       
       for (const selector of locationSelectors) {
@@ -343,111 +499,201 @@ function extractJobPosting(url) {
         }
       }
     }
-    // Indeed
-    else if (url.includes('indeed.com')) {
-      console.log('🔍 Extracting Indeed job...');
+    // Lever - Enhanced extraction
+    else if (url.includes('lever.co')) {
+      console.log('🔍 Extracting Lever job...');
       
       const titleSelectors = [
-        '[data-jk] h1',
-        '.jobsearch-JobInfoHeader-title',
-        'h1[data-testid="jobTitle"]',
-        'h1.jobTitle'
+        '.posting-headline h2',
+        'h2[class*="posting-headline"]',
+        '.job-title',
+        'h1, h2'
       ];
       
       for (const selector of titleSelectors) {
         const titleEl = document.querySelector(selector);
         if (titleEl && titleEl.textContent.trim()) {
           data.jobTitle = titleEl.textContent.trim();
+          console.log('✅ Found job title:', data.jobTitle);
           break;
         }
       }
       
-      const companySelectors = [
-        '[data-testid="inlineHeader-companyName"]',
-        '.icl-u-lg-mr--sm',
-        '[data-testid="companyName"]',
-        '.companyName'
-      ];
-      
-      for (const selector of companySelectors) {
-        const companyEl = document.querySelector(selector);
-        if (companyEl && companyEl.textContent.trim()) {
-          data.companyName = companyEl.textContent.trim();
-          break;
-        }
+      // Extract company from URL for Lever
+      const urlParts = url.split('/');
+      const companySlug = urlParts.find(part => part.includes('jobs.lever.co'))?.replace('jobs.', '').replace('.lever.co', '');
+      if (companySlug) {
+        data.companyName = companySlug.split('.')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        console.log('✅ Found company from URL:', data.companyName);
       }
       
       const locationSelectors = [
-        '[data-testid="job-location"]',
-        '.icl-u-xs-mt--xs',
-        '[data-testid="jobLocation"]'
+        '.posting-categories .sort-by-location',
+        '.location',
+        '[class*="location"]'
       ];
       
       for (const selector of locationSelectors) {
         const locationEl = document.querySelector(selector);
         if (locationEl && locationEl.textContent.trim()) {
           data.location = locationEl.textContent.trim();
+          console.log('✅ Found location:', data.location);
           break;
         }
       }
     }
-    // Greenhouse
-    else if (url.includes('greenhouse.io')) {
-      console.log('🔍 Extracting Greenhouse job...');
-      data.jobTitle = document.querySelector('.app-title, h1')?.textContent?.trim() || '';
-      data.companyName = document.querySelector('.company-name, .header .company')?.textContent?.trim() || '';
-      data.location = document.querySelector('.location, .app-location')?.textContent?.trim() || '';
-    }
-    // Generic fallback - Enhanced
-    else {
-      console.log('🔍 Extracting generic job...');
+    // Workday - Enhanced extraction
+    else if (url.includes('workday.com')) {
+      console.log('🔍 Extracting Workday job...');
       
-      // Enhanced job title extraction
       const titleSelectors = [
+        'h1[data-automation-id="jobPostingHeader"]',
+        'h1[class*="job-title"]',
         'h1',
-        '[class*="job-title"]',
-        '[class*="title"]',
-        '[id*="job-title"]',
-        '[id*="title"]'
+        '[data-automation-id="jobTitle"]'
       ];
       
       for (const selector of titleSelectors) {
         const titleEl = document.querySelector(selector);
         if (titleEl && titleEl.textContent.trim()) {
           data.jobTitle = titleEl.textContent.trim();
+          console.log('✅ Found job title:', data.jobTitle);
           break;
         }
       }
       
-      if (!data.jobTitle) {
-        data.jobTitle = document.title;
+      // Extract company from subdomain for Workday
+      const hostname = new URL(url).hostname;
+      const companySlug = hostname.split('.')[0];
+      if (companySlug && companySlug !== 'www') {
+        data.companyName = companySlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        console.log('✅ Found company from subdomain:', data.companyName);
       }
       
-      // Enhanced company name extraction
+      const locationSelectors = [
+        '[data-automation-id="jobPostingLocation"]',
+        '.job-location',
+        '[class*="location"]'
+      ];
+      
+      for (const selector of locationSelectors) {
+        const locationEl = document.querySelector(selector);
+        if (locationEl && locationEl.textContent.trim()) {
+          data.location = locationEl.textContent.trim();
+          console.log('✅ Found location:', data.location);
+          break;
+        }
+      }
+    }
+    // Generic fallback - Enhanced with comprehensive extraction
+    else {
+      console.log('🔍 Extracting generic job...');
+      
+      // Enhanced job title extraction with more comprehensive selectors
+      const titleSelectors = [
+        'h1',
+        'h2',
+        '[class*="job-title"]',
+        '[class*="title"]',
+        '[class*="position"]',
+        '[class*="role"]',
+        '[id*="job-title"]',
+        '[id*="title"]',
+        '[data-testid*="title"]',
+        '[data-testid*="job"]',
+        '.job-header h1',
+        '.job-header h2',
+        '.position-title',
+        '.role-title'
+      ];
+      
+      for (const selector of titleSelectors) {
+        const titleEl = document.querySelector(selector);
+        if (titleEl && titleEl.textContent.trim() && titleEl.textContent.trim().length > 3) {
+          data.jobTitle = titleEl.textContent.trim();
+          console.log('✅ Found job title:', data.jobTitle);
+          break;
+        }
+      }
+      
+      // Enhanced company name extraction with URL fallback
       const companySelectors = [
-        '.company', '.employer', '[class*="company"]', '[class*="employer"]',
-        '[data-company]', '[class*="organization"]', '.org-name'
+        '.company', 
+        '.employer', 
+        '[class*="company"]', 
+        '[class*="employer"]',
+        '[class*="organization"]',
+        '[data-company]', 
+        '.org-name',
+        '.company-name',
+        '.employer-name',
+        '.organization-name',
+        'a[class*="company"]',
+        '[data-testid*="company"]'
       ];
       
       for (const selector of companySelectors) {
         const companyEl = document.querySelector(selector);
-        if (companyEl && companyEl.textContent.trim()) {
+        if (companyEl && companyEl.textContent.trim() && companyEl.textContent.trim().length > 1) {
           data.companyName = companyEl.textContent.trim();
+          console.log('✅ Found company:', data.companyName);
           break;
+        }
+      }
+      
+      // Try to extract company from URL if not found
+      if (!data.companyName) {
+        const hostname = new URL(url).hostname.toLowerCase();
+        const pathParts = new URL(url).pathname.split('/').filter(part => part.length > 0);
+        
+        // Check for company in subdomain
+        const subdomain = hostname.split('.')[0];
+        if (subdomain && subdomain !== 'www' && subdomain !== 'jobs' && subdomain.length > 2) {
+          data.companyName = subdomain.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          console.log('✅ Found company from subdomain:', data.companyName);
+        }
+        // Check for company in URL path
+        else if (pathParts.length > 0) {
+          const potentialCompany = pathParts.find(part => 
+            part.length > 2 && 
+            !['jobs', 'careers', 'job', 'career', 'apply', 'application'].includes(part.toLowerCase())
+          );
+          if (potentialCompany) {
+            data.companyName = potentialCompany.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            console.log('✅ Found company from URL path:', data.companyName);
+          }
         }
       }
       
       // Enhanced location extraction
       const locationSelectors = [
-        '.location', '[class*="location"]', '.address', '[class*="address"]',
-        '[data-location]', '.city', '.region'
+        '.location', 
+        '[class*="location"]', 
+        '.address', 
+        '[class*="address"]',
+        '[data-location]', 
+        '.city', 
+        '.region',
+        '.job-location',
+        '.position-location',
+        '[data-testid*="location"]',
+        '[class*="geo"]'
       ];
       
       for (const selector of locationSelectors) {
         const locationEl = document.querySelector(selector);
-        if (locationEl && locationEl.textContent.trim()) {
-          data.location = locationEl.textContent.trim();
-          break;
+        if (locationEl && locationEl.textContent.trim() && locationEl.textContent.trim().length > 2) {
+          const locationText = locationEl.textContent.trim();
+          // Filter out non-location text
+          if (!locationText.includes('$') && 
+              !locationText.includes('salary') && 
+              !locationText.includes('hour') &&
+              !locationText.includes('apply') &&
+              locationText.length < 100) {
+            data.location = locationText;
+            console.log('✅ Found location:', data.location);
+            break;
+          }
         }
       }
     }

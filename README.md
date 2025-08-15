@@ -1,6 +1,6 @@
-# LinkedIn Job Tracker
+# CareerTracker - Professional Job Search Management
 
-A complete Chrome extension with backend and dashboard for automatically tracking LinkedIn profiles and job applications, featuring AI-powered connection requests and message rewriting using Google Gemini.
+A comprehensive multi-user job search management system with Chrome extension, backend API, and React dashboard. Features AI-powered LinkedIn integration, connection tracking, and application monitoring using Google Gemini.
 
 ## 🚀 Features
 
@@ -14,7 +14,7 @@ A complete Chrome extension with backend and dashboard for automatically trackin
 ## 📁 Project Structure
 
 ```
-linkedin-job-tracker/
+careertracker/
 ├── extension/          # Chrome extension (Manifest v3)
 │   ├── manifest.json   # Extension configuration
 │   ├── background.js   # Service worker

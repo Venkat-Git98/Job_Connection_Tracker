@@ -1,7 +1,7 @@
 {
-  "name": "linkedin-job-tracker-backend",
+  "name": "careertracker-backend",
   "version": "1.0.0",
-  "description": "Backend API for LinkedIn job tracker",
+  "description": "Multi-user backend API for CareerTracker job search management",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

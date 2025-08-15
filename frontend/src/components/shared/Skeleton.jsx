@@ -16,3 +16,4 @@ const Skeleton = ({ width = '100%', height = 16, rounded = false, style = {} }) 
 export default Skeleton;
 
 
+

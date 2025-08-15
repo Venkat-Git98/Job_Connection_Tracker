@@ -15,6 +15,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   const messageInput = document.getElementById('messageInput');
   const rewriteBtn = document.getElementById('rewriteBtn');
   const generatedContent = document.getElementById('generatedContent');
+
+  // User Management Elements
+  const userSection = document.getElementById('userSection');
+  const userSelection = document.getElementById('userSelection');
+  const userCreation = document.getElementById('userCreation');
+  const currentUserDisplay = document.getElementById('currentUserDisplay');
+  const userSelect = document.getElementById('userSelect');
+  const createUserBtn = document.getElementById('createUserBtn');
+  const usernameInput = document.getElementById('usernameInput');
+  const displayNameInput = document.getElementById('displayNameInput');
+  const createUserSubmit = document.getElementById('createUserSubmit');
+  const cancelUserCreation = document.getElementById('cancelUserCreation');
+  const currentUserName = document.getElementById('currentUserName');
+  const currentUserStats = document.getElementById('currentUserStats');
+  const switchUserBtn = document.getElementById('switchUserBtn');
+  const usernameError = document.getElementById('usernameError');
+  const displayNameError = document.getElementById('displayNameError');
   
   // Message Context Interface Elements
   const messageContextSection = document.getElementById('messageContextSection');
@@ -33,6 +50,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   let currentConversations = [];
   let selectedConversation = null;
 
+  // Initialize user management
+  await initializeUserManagement();
+
   // Load last extraction data
   await loadLastExtraction();
 
@@ -42,6 +62,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   generateConnectionBtn.addEventListener('click', generateConnectionRequest);
   markAppliedBtn.addEventListener('click', markJobAsApplied);
   rewriteBtn.addEventListener('click', rewriteMessage);
+
+  // User Management Event Listeners
+  userSelect.addEventListener('change', handleUserSelection);
+  createUserBtn.addEventListener('click', showUserCreation);
+  createUserSubmit.addEventListener('click', handleUserCreation);
+  cancelUserCreation.addEventListener('click', hideUserCreation);
+  switchUserBtn.addEventListener('click', showUserSelection);
+  usernameInput.addEventListener('input', validateUsernameInput);
+  displayNameInput.addEventListener('input', validateDisplayNameInput);
   
   // Message Context Event Listeners
   closeChatBtn.addEventListener('click', closeChatInterface);
@@ -574,4 +603,271 @@ document.addEventListener('DOMContentLoaded', async () => {
       }, 10000);
     }
   }
+
+  // User Management Functions
+  async function initializeUserManagement() {
+    try {
+      showStatus('info', 'Initializing user management...');
+      
+      // Initialize user manager
+      const initialized = await window.userManager.initialize();
+      
+      if (!initialized) {
+        throw new Error('Failed to initialize user management');
+      }
+
+      // Check if user is logged in
+      if (window.userManager.isLoggedIn()) {
+        await showCurrentUser();
+      } else {
+        await showUserSelection();
+      }
+
+    } catch (error) {
+      console.error('Failed to initialize user management:', error);
+      showStatus('error', 'Failed to initialize user management. Please try again.');
+    }
+  }
+
+  async function showUserSelection() {
+    try {
+      // Load all users
+      await window.userManager.loadAllUsers();
+      const users = window.userManager.getAllUsers();
+
+      // Clear and populate user select
+      userSelect.innerHTML = '<option value="">Select User...</option>';
+      users.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.displayName;
+        userSelect.appendChild(option);
+      });
+
+      // Show user selection interface
+      userSelection.classList.remove('hidden');
+      userCreation.classList.add('hidden');
+      currentUserDisplay.classList.add('hidden');
+
+      // Hide main functionality until user is selected
+      hideMainInterface();
+
+    } catch (error) {
+      console.error('Failed to show user selection:', error);
+      showStatus('error', 'Failed to load users. Please try again.');
+    }
+  }
+
+  async function showCurrentUser() {
+    try {
+      const user = window.userManager.getCurrentUser();
+      if (!user) {
+        await showUserSelection();
+        return;
+      }
+
+      // Update user display
+      currentUserName.textContent = user.displayName;
+      
+      // Get user stats
+      const stats = await window.userManager.getUserStats();
+      currentUserStats.textContent = `${stats.profiles} profiles • ${stats.jobs} jobs`;
+
+      // Show current user interface
+      currentUserDisplay.classList.remove('hidden');
+      userSelection.classList.add('hidden');
+      userCreation.classList.add('hidden');
+
+      // Show main functionality
+      showMainInterface();
+
+    } catch (error) {
+      console.error('Failed to show current user:', error);
+      await showUserSelection();
+    }
+  }
+
+  function showUserCreation() {
+    userCreation.classList.remove('hidden');
+    userSelection.classList.add('hidden');
+    currentUserDisplay.classList.add('hidden');
+    
+    // Clear form
+    usernameInput.value = '';
+    displayNameInput.value = '';
+    clearFormErrors();
+    
+    // Focus on username input
+    usernameInput.focus();
+  }
+
+  function hideUserCreation() {
+    userCreation.classList.add('hidden');
+    showUserSelection();
+  }
+
+  async function handleUserSelection() {
+    try {
+      const userId = parseInt(userSelect.value);
+      if (!userId) return;
+
+      showStatus('info', 'Switching user...');
+      
+      const user = await window.userManager.switchUser(userId);
+      await showCurrentUser();
+      
+      showStatus('success', `Switched to ${user.displayName}`);
+
+    } catch (error) {
+      console.error('Failed to switch user:', error);
+      showStatus('error', 'Failed to switch user. Please try again.');
+    }
+  }
+
+  async function handleUserCreation() {
+    try {
+      const username = usernameInput.value.trim();
+      const displayName = displayNameInput.value.trim();
+
+      // Clear previous errors
+      clearFormErrors();
+
+      // Validate inputs
+      let hasErrors = false;
+
+      const usernameValidation = window.userManager.validateUsername(username);
+      if (!usernameValidation.valid) {
+        showFormError('username', usernameValidation.error);
+        hasErrors = true;
+      }
+
+      const displayNameValidation = window.userManager.validateDisplayName(displayName);
+      if (!displayNameValidation.valid) {
+        showFormError('displayName', displayNameValidation.error);
+        hasErrors = true;
+      }
+
+      // Check username availability
+      if (usernameValidation.valid) {
+        const isAvailable = await window.userManager.isUsernameAvailable(username);
+        if (!isAvailable) {
+          showFormError('username', 'This username is already taken');
+          hasErrors = true;
+        }
+      }
+
+      if (hasErrors) return;
+
+      // Show loading state
+      setLoading(createUserSubmit, true);
+      showStatus('info', 'Creating user profile...');
+
+      // Create user
+      const user = await window.userManager.createUser(username, displayName);
+      
+      // Show success and switch to user display
+      showStatus('success', `Welcome, ${user.displayName}!`);
+      await showCurrentUser();
+
+    } catch (error) {
+      console.error('Failed to create user:', error);
+      showStatus('error', error.message || 'Failed to create user. Please try again.');
+    } finally {
+      setLoading(createUserSubmit, false);
+    }
+  }
+
+  function validateUsernameInput() {
+    const username = usernameInput.value.trim();
+    const validation = window.userManager.validateUsername(username);
+    
+    if (username && !validation.valid) {
+      showFormError('username', validation.error);
+    } else {
+      clearFormError('username');
+    }
+  }
+
+  function validateDisplayNameInput() {
+    const displayName = displayNameInput.value.trim();
+    const validation = window.userManager.validateDisplayName(displayName);
+    
+    if (displayName && !validation.valid) {
+      showFormError('displayName', validation.error);
+    } else {
+      clearFormError('displayName');
+    }
+  }
+
+  function showFormError(field, message) {
+    const input = field === 'username' ? usernameInput : displayNameInput;
+    const error = field === 'username' ? usernameError : displayNameError;
+    
+    input.classList.add('error');
+    error.textContent = message;
+    error.classList.remove('hidden');
+  }
+
+  function clearFormError(field) {
+    const input = field === 'username' ? usernameInput : displayNameInput;
+    const error = field === 'username' ? usernameError : displayNameError;
+    
+    input.classList.remove('error');
+    error.classList.add('hidden');
+  }
+
+  function clearFormErrors() {
+    clearFormError('username');
+    clearFormError('displayName');
+  }
+
+  function hideMainInterface() {
+    // Hide all main functionality when no user is selected
+    document.querySelector('.actions').style.display = 'none';
+    messageSection.classList.add('hidden');
+    messageContextSection.classList.add('hidden');
+    pageInfoDiv.classList.add('hidden');
+  }
+
+  function showMainInterface() {
+    // Show main functionality when user is selected
+    document.querySelector('.actions').style.display = 'flex';
+  }
+
+  // Override existing functions to include user context
+  const originalExtractPageData = extractPageData;
+  extractPageData = async function() {
+    if (!window.userManager.isLoggedIn()) {
+      showStatus('error', 'Please select a user profile first');
+      return;
+    }
+    return originalExtractPageData.call(this);
+  };
+
+  const originalGenerateConnectionRequest = generateConnectionRequest;
+  generateConnectionRequest = async function() {
+    if (!window.userManager.isLoggedIn()) {
+      showStatus('error', 'Please select a user profile first');
+      return;
+    }
+    return originalGenerateConnectionRequest.call(this);
+  };
+
+  const originalMarkJobAsApplied = markJobAsApplied;
+  markJobAsApplied = async function() {
+    if (!window.userManager.isLoggedIn()) {
+      showStatus('error', 'Please select a user profile first');
+      return;
+    }
+    return originalMarkJobAsApplied.call(this);
+  };
+
+  const originalRewriteMessage = rewriteMessage;
+  rewriteMessage = async function() {
+    if (!window.userManager.isLoggedIn()) {
+      showStatus('error', 'Please select a user profile first');
+      return;
+    }
+    return originalRewriteMessage.call(this);
+  };
 });

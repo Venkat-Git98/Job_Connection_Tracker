@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { apiService } from '../../services/api'
 import { useToast } from '../../contexts/ToastContext'
+import { useUser } from '../../contexts/UserContext'
 import MetricCard from './MetricCard'
 import QuickActions from './QuickActions'
 import RecentActivity from './RecentActivity'
@@ -12,10 +13,13 @@ const Dashboard = () => {
   const [recentActivity, setRecentActivity] = useState([])
   const [loading, setLoading] = useState(true)
   const { showError } = useToast()
+  const { currentUser } = useUser()
 
   useEffect(() => {
-    loadDashboardData()
-  }, [])
+    if (currentUser) {
+      loadDashboardData()
+    }
+  }, [currentUser])
 
   const loadDashboardData = async () => {
     try {
@@ -62,12 +66,18 @@ const Dashboard = () => {
     }
   }
 
+  // Check if current user has email access (only Venkat)
+  const hasEmailAccess = currentUser && (
+    currentUser.username === 'venkat' || 
+    currentUser.preferences?.email_access === true
+  )
+
   const metrics = stats ? [
     {
       id: 'connections',
       title: 'LinkedIn Connections',
       value: stats.totalConnections || 0,
-      subtitle: 'Total network size',
+      subtitle: `${currentUser?.displayName}'s network`,
       icon: '🤝',
       trend: stats.connectionsTrend || 0,
       color: 'var(--gradient-secondary)',
@@ -112,10 +122,13 @@ const Dashboard = () => {
         <div className="welcome-content">
           <div className="welcome-text">
             <h1 className="welcome-title">
-              Welcome back, <span className="highlight">Venkat</span>
+              Welcome back, <span className="highlight">{currentUser?.displayName || 'User'}</span>
             </h1>
             <p className="welcome-subtitle">
-              Track your job applications, manage connections, and optimize your career search strategy.
+              {currentUser?.username === 'venkat' 
+                ? 'Track your job applications, manage connections, and optimize your career search strategy with AI-powered insights.'
+                : 'Track your job applications, manage connections, and optimize your career search strategy.'
+              }
             </p>
           </div>
           <div className="welcome-actions">
@@ -197,6 +210,16 @@ const Dashboard = () => {
             </div>
             <div className="quick-nav-arrow">→</div>
           </Link>
+          {hasEmailAccess && (
+            <Link to="/emails" className="quick-nav-card">
+              <div className="quick-nav-icon">📧</div>
+              <div className="quick-nav-content">
+                <h4>Email Monitor</h4>
+                <p>Track application responses</p>
+              </div>
+              <div className="quick-nav-arrow">→</div>
+            </Link>
+          )}
           <Link to="/analytics" className="quick-nav-card">
             <div className="quick-nav-icon">📊</div>
             <div className="quick-nav-content">

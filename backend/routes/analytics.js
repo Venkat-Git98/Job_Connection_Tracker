@@ -20,22 +20,23 @@ router.get('/dashboard', async (req, res) => {
         COUNT(CASE WHEN application_status != 'viewed' THEN 1 END) as applied,
         COUNT(CASE WHEN application_status IN ('interviewing', 'rejected', 'offer') THEN 1 END) as responses
       FROM jobs 
-      WHERE created_at >= $1
+      WHERE created_at >= $1 AND user_id = $2
       GROUP BY DATE(created_at)
       ORDER BY date DESC
-      LIMIT $2
+      LIMIT $3
     `;
     
-    const dailyStats = await pool.query(dailyStatsQuery, [startDate, daysBack]);
+    const dailyStats = await pool.query(dailyStatsQuery, [startDate, req.user.id, daysBack]);
     
     // Get status breakdown
     const statusQuery = `
       SELECT application_status, COUNT(*) as count
       FROM jobs
+      WHERE user_id = $1
       GROUP BY application_status
     `;
     
-    const statusBreakdown = await pool.query(statusQuery);
+    const statusBreakdown = await pool.query(statusQuery, [req.user.id]);
     
     // Get email type breakdown
     const emailTypeQuery = `
@@ -56,12 +57,13 @@ router.get('/dashboard', async (req, res) => {
         COUNT(CASE WHEN application_status = 'offer' THEN 1 END) as offers,
         COUNT(CASE WHEN application_status = 'rejected' THEN 1 END) as rejections
       FROM jobs
+      WHERE user_id = $1
       GROUP BY company_name
       ORDER BY applications DESC
       LIMIT 15
     `;
     
-    const companyStats = await pool.query(companyStatsQuery);
+    const companyStats = await pool.query(companyStatsQuery, [req.user.id]);
     
     // Get response rate analytics
     const responseRateQuery = `
@@ -73,19 +75,21 @@ router.get('/dashboard', async (req, res) => {
           THEN EXTRACT(DAY FROM (last_seen_at - created_at))
         END) as avg_response_days
       FROM jobs
+      WHERE user_id = $1
     `;
     
-    const responseRate = await pool.query(responseRateQuery);
+    const responseRate = await pool.query(responseRateQuery, [req.user.id]);
     
     // Get platform breakdown
     const platformQuery = `
       SELECT platform, COUNT(*) as count
       FROM jobs
+      WHERE user_id = $1
       GROUP BY platform
       ORDER BY count DESC
     `;
     
-    const platformStats = await pool.query(platformQuery);
+    const platformStats = await pool.query(platformQuery, [req.user.id]);
     
     // Get recent activity
     const recentActivityQuery = `
@@ -93,15 +97,17 @@ router.get('/dashboard', async (req, res) => {
         SELECT 'job' as type, job_title as title, company_name as company, 
                application_status as status, created_at as date
         FROM jobs
+        WHERE user_id = $1
         ORDER BY created_at DESC
         LIMIT 10
       )
       UNION ALL
       (
         SELECT 'email' as type, email_subject as title, 
-               COALESCE((SELECT company_name FROM jobs WHERE id = email_events.job_id), 'Unknown') as company,
+               COALESCE((SELECT company_name FROM jobs WHERE id = email_events.job_id AND user_id = $1), 'Unknown') as company,
                email_type as status, processed_at as date
         FROM email_events
+        WHERE user_id = $1
         ORDER BY processed_at DESC
         LIMIT 10
       )
@@ -109,7 +115,7 @@ router.get('/dashboard', async (req, res) => {
       LIMIT 15
     `;
     
-    const recentActivity = await pool.query(recentActivityQuery);
+    const recentActivity = await pool.query(recentActivityQuery, [req.user.id]);
     
     // Calculate trends
     const trendsQuery = `

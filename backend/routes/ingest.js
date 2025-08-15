@@ -32,7 +32,7 @@ router.post('/page', async (req, res) => {
       }
 
       // Store profile in database
-      result = await databaseService.upsertProfile(value);
+      result = await databaseService.upsertProfile(value, req.user.id);
       
       res.json({
         success: true,
@@ -63,7 +63,7 @@ router.post('/page', async (req, res) => {
       console.log('✅ Job data validated successfully:', value);
 
       // Store job in database
-      result = await databaseService.upsertJob(value);
+      result = await databaseService.upsertJob(value, req.user.id);
       console.log('💾 Job stored in database:', result);
       
       res.json({

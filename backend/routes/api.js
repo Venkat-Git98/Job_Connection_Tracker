@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 // Import route modules
+router.use('/users', require('./users'));
 router.use('/ingest', require('./ingest'));
 router.use('/generate', require('./generate'));
 router.use('/rewrite', require('./rewrite'));

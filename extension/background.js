@@ -21,7 +21,7 @@ async function extractPageData(tabId, url, title) {
     if (response && response.success) {
       // Send extracted data to backend
       await sendToBackend(response.data);
-      
+
       // Store last extraction result for popup
       await chrome.storage.local.set({
         lastExtraction: {
@@ -51,23 +51,32 @@ async function extractPageData(tabId, url, title) {
 async function sendToBackend(extractionData) {
   try {
     console.log('Sending data to backend:', extractionData);
-    
+
+    // Get current user ID from storage
+    const result = await chrome.storage.local.get(['currentUserId']);
+    const userId = result.currentUserId;
+
+    if (!userId) {
+      throw new Error('No user selected. Please select a user profile first.');
+    }
+
     const response = await fetch(`${API_BASE_URL}/ingest/page`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-User-ID': userId.toString()
       },
       body: JSON.stringify(extractionData)
     });
 
-    const result = await response.json();
-    
+    const apiResult = await response.json();
+
     if (!response.ok) {
-      throw new Error(result.error || 'Failed to send data to backend');
+      throw new Error(apiResult.error || 'Failed to send data to backend');
     }
 
-    console.log('✅ Data sent to backend successfully:', result);
-    return result;
+    console.log('✅ Data sent to backend successfully:', apiResult);
+    return apiResult;
   } catch (error) {
     console.error('❌ Failed to send data to backend:', error);
     throw error;
@@ -82,28 +91,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true; // Keep message channel open for async response
   }
-  
+
   if (request.action === 'generateConnection') {
     generateConnectionRequest(request.profileData)
       .then(sendResponse)
       .catch(error => sendResponse({ error: error.message }));
     return true;
   }
-  
+
   if (request.action === 'rewriteMessage') {
     rewriteMessage(request.data)
       .then(sendResponse)
       .catch(error => sendResponse({ error: error.message }));
     return true;
   }
-  
+
   if (request.action === 'markJobApplied') {
     markJobAsApplied(request.jobUrl)
       .then(sendResponse)
       .catch(error => sendResponse({ error: error.message }));
     return true;
   }
-  
+
   if (request.action === 'generateContextualMessage') {
     generateContextualMessage(request.data)
       .then(sendResponse)
@@ -115,21 +124,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Generate connection request using AI
 async function generateConnectionRequest(profileData) {
   try {
+    // Get current user ID from storage
+    const result = await chrome.storage.local.get(['currentUserId']);
+    const userId = result.currentUserId;
+
+    if (!userId) {
+      throw new Error('No user selected. Please select a user profile first.');
+    }
+
     const response = await fetch(`${API_BASE_URL}/generate/connection`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-User-ID': userId.toString()
       },
       body: JSON.stringify({ targetProfile: profileData })
     });
 
-    const result = await response.json();
-    
+    const apiResult = await response.json();
+
     if (!response.ok) {
-      throw new Error(result.error || 'Failed to generate connection request');
+      throw new Error(apiResult.error || 'Failed to generate connection request');
     }
 
-    return result;
+    return apiResult;
   } catch (error) {
     console.error('Failed to generate connection request:', error);
     throw error;
@@ -139,21 +157,30 @@ async function generateConnectionRequest(profileData) {
 // Rewrite message using AI
 async function rewriteMessage(messageData) {
   try {
+    // Get current user ID from storage
+    const result = await chrome.storage.local.get(['currentUserId']);
+    const userId = result.currentUserId;
+
+    if (!userId) {
+      throw new Error('No user selected. Please select a user profile first.');
+    }
+
     const response = await fetch(`${API_BASE_URL}/rewrite/message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-User-ID': userId.toString()
       },
       body: JSON.stringify(messageData)
     });
 
-    const result = await response.json();
-    
+    const apiResult = await response.json();
+
     if (!response.ok) {
-      throw new Error(result.error || 'Failed to rewrite message');
+      throw new Error(apiResult.error || 'Failed to rewrite message');
     }
 
-    return result;
+    return apiResult;
   } catch (error) {
     console.error('Failed to rewrite message:', error);
     throw error;
@@ -163,21 +190,30 @@ async function rewriteMessage(messageData) {
 // Mark job as applied
 async function markJobAsApplied(jobUrl) {
   try {
+    // Get current user ID from storage
+    const result = await chrome.storage.local.get(['currentUserId']);
+    const userId = result.currentUserId;
+
+    if (!userId) {
+      throw new Error('No user selected. Please select a user profile first.');
+    }
+
     const response = await fetch(`${API_BASE_URL}/jobs/mark-applied`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-User-ID': userId.toString()
       },
       body: JSON.stringify({ jobUrl })
     });
 
-    const result = await response.json();
-    
+    const apiResult = await response.json();
+
     if (!response.ok) {
-      throw new Error(result.error || 'Failed to mark job as applied');
+      throw new Error(apiResult.error || 'Failed to mark job as applied');
     }
 
-    return result;
+    return apiResult;
   } catch (error) {
     console.error('Failed to mark job as applied:', error);
     throw error;
@@ -187,21 +223,30 @@ async function markJobAsApplied(jobUrl) {
 // Generate contextual message using AI
 async function generateContextualMessage(messageData) {
   try {
+    // Get current user ID from storage
+    const result = await chrome.storage.local.get(['currentUserId']);
+    const userId = result.currentUserId;
+
+    if (!userId) {
+      throw new Error('No user selected. Please select a user profile first.');
+    }
+
     const response = await fetch(`${API_BASE_URL}/rewrite/contextual-message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-User-ID': userId.toString()
       },
       body: JSON.stringify(messageData)
     });
 
-    const result = await response.json();
-    
+    const apiResult = await response.json();
+
     if (!response.ok) {
-      throw new Error(result.error || 'Failed to generate contextual message');
+      throw new Error(apiResult.error || 'Failed to generate contextual message');
     }
 
-    return result;
+    return apiResult;
   } catch (error) {
     console.error('Failed to generate contextual message:', error);
     throw error;

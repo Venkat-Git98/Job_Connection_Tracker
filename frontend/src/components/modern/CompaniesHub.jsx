@@ -1,16 +1,26 @@
 import React, { useState, useEffect } from 'react'
 import { apiService } from '../../services/api'
 import { useToast } from '../../contexts/ToastContext'
+import { useUser } from '../../contexts/UserContext'
 
 const CompaniesHub = () => {
   const [companies, setCompanies] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const { showError } = useToast()
+  const { currentUser } = useUser()
 
   useEffect(() => {
-    loadCompanies()
-  }, [])
+    if (currentUser) {
+      loadCompanies()
+    }
+  }, [currentUser])
+
+  useEffect(() => {
+    if (currentUser) {
+      loadCompanies()
+    }
+  }, [searchTerm])
 
   const loadCompanies = async () => {
     try {

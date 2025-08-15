@@ -7,7 +7,7 @@ router.get('/', async (req, res) => {
   try {
     const { search, status, limit = 100, offset = 0 } = req.query;
 
-    const profiles = await databaseService.getProfiles(search, parseInt(limit), parseInt(offset));
+    const profiles = await databaseService.getProfiles(req.user.id, search, parseInt(limit), parseInt(offset));
 
     // Apply status filter if provided
     let filteredProfiles = profiles;
@@ -75,7 +75,7 @@ router.post('/update-status', async (req, res) => {
       });
     }
 
-    const updatedOutreach = await databaseService.updateConnectionStatus(profileId, status);
+    const updatedOutreach = await databaseService.updateConnectionStatus(profileId, status, req.user.id);
 
     if (!updatedOutreach) {
       return res.status(404).json({
@@ -114,11 +114,12 @@ router.get('/stats', async (req, res) => {
         COUNT(CASE WHEN o.connection_status = 'declined' THEN 1 END) as declined,
         COUNT(CASE WHEN o.connection_status IS NULL OR o.connection_status = 'none' THEN 1 END) as not_contacted
       FROM profiles p
-      LEFT JOIN outreach o ON p.id = o.profile_id;
+      LEFT JOIN outreach o ON p.id = o.profile_id AND o.user_id = $1
+      WHERE p.user_id = $1;
     `;
 
     const pool = require('../config/database');
-    const result = await pool.query(query);
+    const result = await pool.query(query, [req.user.id]);
     const stats = result.rows[0];
 
     res.json({
@@ -158,21 +159,21 @@ router.post('/add-note', async (req, res) => {
         WHEN notes IS NULL OR notes = '' THEN $1
         ELSE notes || '\n---\n' || $1
       END
-      WHERE profile_id = $2
+      WHERE profile_id = $2 AND user_id = $3
       RETURNING *;
     `;
 
     const pool = require('../config/database');
-    const result = await pool.query(query, [note.trim(), profileId]);
+    const result = await pool.query(query, [note.trim(), profileId, req.user.id]);
 
     if (result.rows.length === 0) {
       // Create outreach record if it doesn't exist
       const createQuery = `
-        INSERT INTO outreach (profile_id, notes)
-        VALUES ($1, $2)
+        INSERT INTO outreach (user_id, profile_id, notes)
+        VALUES ($1, $2, $3)
         RETURNING *;
       `;
-      const createResult = await pool.query(createQuery, [profileId, note.trim()]);
+      const createResult = await pool.query(createQuery, [req.user.id, profileId, note.trim()]);
       
       res.json({
         success: true,

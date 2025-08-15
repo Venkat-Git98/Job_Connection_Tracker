@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react'
 import { apiService } from '../../services/api'
 import { useToast } from '../../contexts/ToastContext'
+import { useUser } from '../../contexts/UserContext'
 
 const AnalyticsHub = () => {
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState('30d')
   const { showError } = useToast()
+  const { currentUser } = useUser()
 
   useEffect(() => {
-    loadAnalytics()
-  }, [timeRange])
+    if (currentUser) {
+      loadAnalytics()
+    }
+  }, [currentUser, timeRange])
 
   const loadAnalytics = async () => {
     try {

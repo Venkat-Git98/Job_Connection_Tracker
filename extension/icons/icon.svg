@@ -1,29 +1,44 @@
-<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" /
-      <stop offset="100%" style="stop-color:#764ba2;stop-opacity
+    <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#f093f
-      <stop offset="100%" style="stop-color:#f5576c;stop-opacity:1" />
-    </</svg>.5"/>
-ty="02)" opacigradrl(# fill="u1.5" r=""35""80" cy=rcle cx=>
-  <ci.7"/city="0)" opaad2l(#grur fill="35" r="2"y="cx="90" circle )"/>
-  <cgrad2fill="url(#" r="3" " cy="40"85e cx=<circl
-  >rkle --paI s!-- A
-  <
-  >"#94a3b8"/"3" fill=" rx= height="632""" width="35" y="78ect x=/>
-  <r="#64748b"" fill" rx="3ht="6"48" heigdth=" wi8 y="6"t x="35ec"/>
-  <rurl(#grad2)=""3" fillrx=eight="6"  h"40"" width= y="58"35"ct x= <red1)"/>
- "url(#gra fill=="4" rxt="8"" heigh width="58" y="45"35 <rect x="icon -->
- e yln-stLinkedI<!-- 
+    <linearGradient id="secondaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
   
-  0.95"/>opacity="white" ill=" f"45"r=64" ="cx="64" cycircle 
-  <->le -r circ-- Inne  <!9"/>
+  <!-- Background Circle -->
+  <circle cx="64" cy="64" r="56" fill="url(#primaryGradient)" filter="url(#shadow)"/>
   
-pacity="0.rad1)" orl(#gfill="ur="60" " cy="64" "64x=
-  <circle c circle -->round<!-- Backgefs>
+  <!-- Briefcase Icon -->
+  <g transform="translate(32, 28)">
+    <!-- Briefcase Body -->
+    <rect x="8" y="20" width="48" height="32" rx="6" fill="white" opacity="0.95"/>
+    <rect x="8" y="20" width="48" height="4" rx="2" fill="white"/>
+    
+    <!-- Briefcase Handle -->
+    <rect x="24" y="12" width="16" height="8" rx="4" fill="none" stroke="white" stroke-width="3"/>
+    
+    <!-- Connection Lines -->
+    <g opacity="0.8">
+      <!-- Network nodes -->
+      <circle cx="16" cy="60" r="3" fill="white"/>
+      <circle cx="32" cy="68" r="3" fill="white"/>
+      <circle cx="48" cy="60" r="3" fill="white"/>
+      
+      <!-- Connection lines -->
+      <line x1="16" y1="60" x2="32" y2="68" stroke="white" stroke-width="2" opacity="0.6"/>
+      <line x1="32" y1="68" x2="48" y2="60" stroke="white" stroke-width="2" opacity="0.6"/>
+    </g>
+  </g>
   
-    </dradient>
-linearG
+  <!-- Accent Elements -->
+  <circle cx="96" cy="32" r="4" fill="white" opacity="0.3"/>
+  <circle cx="32" cy="96" r="6" fill="white" opacity="0.2"/>
+</svg>

@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTheme } from '../../contexts/ThemeContext'
+import { useUser } from '../../contexts/UserContext'
 import ThemeToggle from './ThemeToggle'
+import UserSelector from './UserSelector'
+import UserGuard from './UserGuard'
 
 const Layout = ({ children }) => {
   const location = useLocation()
   const { theme } = useTheme()
+  const { currentUser } = useUser()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -37,6 +41,12 @@ const Layout = ({ children }) => {
     }
   }, [isMobileMenuOpen])
 
+  // Check if current user has email access (only Venkat)
+  const hasEmailAccess = currentUser && (
+    currentUser.username === 'venkat' || 
+    currentUser.preferences?.email_access === true
+  )
+
   const navItems = [
     { 
       path: '/connections', 
@@ -53,11 +63,11 @@ const Layout = ({ children }) => {
       label: 'Companies',
       gradient: 'var(--gradient-success)'
     },
-    { 
+    ...(hasEmailAccess ? [{ 
       path: '/emails', 
       label: 'Email Monitor',
       gradient: 'var(--gradient-warning)'
-    },
+    }] : []),
     { 
       path: '/analytics', 
       label: 'Analytics',
@@ -111,6 +121,9 @@ const Layout = ({ children }) => {
 
           {/* Header Actions */}
           <div className="header-actions">
+            <div className="user-selector-header">
+              <UserSelector />
+            </div>
             <ThemeToggle />
             <button
               className={`mobile-menu-toggle ${isMobileMenuOpen ? 'open' : ''}`}
@@ -160,7 +173,9 @@ const Layout = ({ children }) => {
       <main className="main">
         <div className="main-container">
           <div className="content animate-fade-in">
-            {children}
+            <UserGuard>
+              {children}
+            </UserGuard>
           </div>
         </div>
       </main>
@@ -345,6 +360,11 @@ const Layout = ({ children }) => {
 
         .mobile-menu-toggle:hover {
           background: var(--bg-glass-light);
+        }
+
+        .user-selector-header {
+          display: flex;
+          align-items: center;
         }
 
         /* Mobile Navigation Overlay */

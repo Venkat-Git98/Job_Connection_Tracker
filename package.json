@@ -1,7 +1,7 @@
 {
-  "name": "linkedin-job-tracker",
+  "name": "careertracker",
   "version": "1.0.0",
-  "description": "Chrome extension with backend and dashboard for tracking LinkedIn profiles and job applications",
+  "description": "Multi-user job search management system with AI-powered LinkedIn integration",
   "main": "index.js",
   "scripts": {
     "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
@@ -14,7 +14,7 @@
   "devDependencies": {
     "concurrently": "^8.2.2"
   },
-  "keywords": ["chrome-extension", "linkedin", "job-tracker", "ai"],
+  "keywords": ["chrome-extension", "linkedin", "job-tracker", "ai", "career-management", "multi-user"],
   "author": "Your Name",
   "license": "MIT"
 }
