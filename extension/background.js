@@ -2,6 +2,66 @@
 
 const API_BASE_URL = 'https://jobconnectiontracker-production.up.railway.app/api';
 
+// Global error handler
+self.addEventListener('error', (event) => {
+  console.warn('Background script error:', event.error);
+});
+
+// Handle unhandled promise rejections
+self.addEventListener('unhandledrejection', (event) => {
+  console.warn('Background script unhandled promise rejection:', event.reason);
+  event.preventDefault();
+});
+
+// Utility function for making API calls with better error handling
+async function makeAPICall(endpoint, options = {}) {
+  try {
+    // Get current user ID from storage
+    const result = await chrome.storage.local.get(['currentUserId']);
+    const userId = result.currentUserId;
+
+    if (!userId) {
+      throw new Error('No user selected. Please select a user profile first.');
+    }
+
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    const defaultOptions = {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-ID': userId.toString()
+      },
+      signal: controller.signal
+    };
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...defaultOptions,
+      ...options,
+      headers: {
+        ...defaultOptions.headers,
+        ...options.headers
+      }
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. Please try again.');
+    }
+    throw error;
+  }
+}
+
 // Handle page data extraction
 async function extractPageData(tabId, url, title) {
   try {
@@ -52,28 +112,10 @@ async function sendToBackend(extractionData) {
   try {
     console.log('Sending data to backend:', extractionData);
 
-    // Get current user ID from storage
-    const result = await chrome.storage.local.get(['currentUserId']);
-    const userId = result.currentUserId;
-
-    if (!userId) {
-      throw new Error('No user selected. Please select a user profile first.');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/ingest/page`, {
+    const apiResult = await makeAPICall('/ingest/page', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-User-ID': userId.toString()
-      },
       body: JSON.stringify(extractionData)
     });
-
-    const apiResult = await response.json();
-
-    if (!response.ok) {
-      throw new Error(apiResult.error || 'Failed to send data to backend');
-    }
 
     console.log('✅ Data sent to backend successfully:', apiResult);
     return apiResult;

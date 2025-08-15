@@ -1,5 +1,19 @@
 // Content script for LinkedIn Job Tracker extension
 
+// Error handler to prevent uncaught errors
+window.addEventListener('error', (event) => {
+  console.warn('Content script error caught:', event.error);
+  // Prevent error from bubbling up
+  event.preventDefault();
+});
+
+// Handle unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+  console.warn('Content script unhandled promise rejection:', event.reason);
+  // Prevent error from bubbling up
+  event.preventDefault();
+});
+
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('📨 Content script received message:', request.action);

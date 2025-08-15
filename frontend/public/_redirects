@@ -1,0 +1,10 @@
+# Netlify redirects file
+
+# Handle service worker requests (return 404 instead of index.html)
+/sw.js /404.html 404
+
+# Handle Chrome extension manifest requests
+/manifest.json /404.html 404
+
+# SPA fallback - redirect all other requests to index.html
+/*    /index.html   200
