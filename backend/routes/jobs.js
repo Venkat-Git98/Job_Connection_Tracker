@@ -225,4 +225,103 @@ router.post('/add-note', async (req, res) => {
   }
 });
 
+// Delete job
+router.delete('/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    
+    if (!jobId || isNaN(jobId)) {
+      return res.status(400).json({
+        error: 'Valid job ID is required'
+      });
+    }
+    
+    const pool = require('../config/database');
+    
+    // First check if the job exists
+    const checkQuery = 'SELECT id, job_title, company_name FROM jobs WHERE id = $1 AND user_id = $2';
+    const checkResult = await pool.query(checkQuery, [jobId, req.user.id]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Job not found'
+      });
+    }
+    
+    // Delete related email events first (cascade)
+    await pool.query('DELETE FROM email_events WHERE job_id = $1', [jobId]);
+    
+    // Delete the job
+    const deleteQuery = 'DELETE FROM jobs WHERE id = $1 AND user_id = $2 RETURNING *';
+    const deleteResult = await pool.query(deleteQuery, [jobId, req.user.id]);
+    
+    console.log(`🗑️ Deleted job: ${checkResult.rows[0].job_title} at ${checkResult.rows[0].company_name}`);
+    
+    res.json({
+      success: true,
+      message: 'Job deleted successfully',
+      deletedJob: {
+        id: deleteResult.rows[0].id,
+        title: deleteResult.rows[0].job_title,
+        company: deleteResult.rows[0].company_name
+      }
+    });
+  } catch (error) {
+    console.error('Failed to delete job:', error);
+    res.status(500).json({
+      error: 'Failed to delete job',
+      message: error.message
+    });
+  }
+});
+
+// Bulk delete jobs
+router.delete('/', async (req, res) => {
+  try {
+    const { jobIds } = req.body;
+    
+    if (!jobIds || !Array.isArray(jobIds) || jobIds.length === 0) {
+      return res.status(400).json({
+        error: 'Array of job IDs is required'
+      });
+    }
+    
+    // Validate all IDs are numbers
+    const invalidIds = jobIds.filter(id => isNaN(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        error: 'All job IDs must be valid numbers'
+      });
+    }
+    
+    const pool = require('../config/database');
+    
+    // Delete related email events first (cascade)
+    await pool.query('DELETE FROM email_events WHERE job_id = ANY($1::int[])', [jobIds]);
+    
+    // Delete the jobs
+    const deleteQuery = 'DELETE FROM jobs WHERE id = ANY($1::int[]) AND user_id = $2 RETURNING id, job_title, company_name';
+    const deleteResult = await pool.query(deleteQuery, [jobIds, req.user.id]);
+    
+    console.log(`🗑️ Bulk deleted ${deleteResult.rows.length} jobs`);
+    
+    res.json({
+      success: true,
+      message: `Successfully deleted ${deleteResult.rows.length} jobs`,
+      deletedCount: deleteResult.rows.length,
+      deletedJobs: deleteResult.rows.map(row => ({
+        id: row.id,
+        title: row.job_title,
+        company: row.company_name
+      }))
+    });
+  } catch (error) {
+    console.error('Failed to bulk delete jobs:', error);
+    res.status(500).json({
+      error: 'Failed to bulk delete jobs',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

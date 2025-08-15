@@ -241,6 +241,18 @@ const EmailMonitorHub = () => {
     }
   }
 
+  // Calculate filtered events first
+  const filteredEvents = emailEvents.filter(event => {
+    const matchesSearch = !searchTerm || 
+      event.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.from?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesType = typeFilter === 'all' || event.type === typeFilter
+    
+    return matchesSearch && matchesType
+  })
+
   const columns = [
     {
       key: 'select',
@@ -320,17 +332,6 @@ const EmailMonitorHub = () => {
       )
     }
   ]
-
-  const filteredEvents = emailEvents.filter(event => {
-    const matchesSearch = !searchTerm || 
-      event.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.from?.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesType = typeFilter === 'all' || event.type === typeFilter
-    
-    return matchesSearch && matchesType
-  })
 
   // Calculate stats
   const stats = {

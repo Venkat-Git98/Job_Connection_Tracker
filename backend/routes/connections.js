@@ -197,4 +197,87 @@ router.post('/add-note', async (req, res) => {
   }
 });
 
+// Delete connection
+router.delete('/:profileId', async (req, res) => {
+  try {
+    const { profileId } = req.params;
+    
+    if (!profileId) {
+      return res.status(400).json({
+        error: 'Profile ID is required'
+      });
+    }
+    
+    const pool = require('../config/database');
+    
+    // First check if the connection exists
+    const checkQuery = 'SELECT id, person_name FROM profiles WHERE id = $1 AND user_id = $2';
+    const checkResult = await pool.query(checkQuery, [profileId, req.user.id]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Connection not found'
+      });
+    }
+    
+    // Delete the connection
+    const deleteQuery = 'DELETE FROM profiles WHERE id = $1 AND user_id = $2 RETURNING *';
+    const deleteResult = await pool.query(deleteQuery, [profileId, req.user.id]);
+    
+    console.log(`🗑️ Deleted connection: ${checkResult.rows[0].person_name}`);
+    
+    res.json({
+      success: true,
+      message: 'Connection deleted successfully',
+      deletedConnection: {
+        id: deleteResult.rows[0].id,
+        name: deleteResult.rows[0].person_name
+      }
+    });
+  } catch (error) {
+    console.error('Failed to delete connection:', error);
+    res.status(500).json({
+      error: 'Failed to delete connection',
+      message: error.message
+    });
+  }
+});
+
+// Bulk delete connections
+router.delete('/', async (req, res) => {
+  try {
+    const { profileIds } = req.body;
+    
+    if (!profileIds || !Array.isArray(profileIds) || profileIds.length === 0) {
+      return res.status(400).json({
+        error: 'Array of profile IDs is required'
+      });
+    }
+    
+    const pool = require('../config/database');
+    
+    // Delete the connections
+    const deleteQuery = 'DELETE FROM profiles WHERE id = ANY($1::int[]) AND user_id = $2 RETURNING id, person_name';
+    const deleteResult = await pool.query(deleteQuery, [profileIds, req.user.id]);
+    
+    console.log(`🗑️ Bulk deleted ${deleteResult.rows.length} connections`);
+    
+    res.json({
+      success: true,
+      message: `Successfully deleted ${deleteResult.rows.length} connections`,
+      deletedCount: deleteResult.rows.length,
+      deletedConnections: deleteResult.rows.map(row => ({
+        id: row.id,
+        name: row.person_name
+      }))
+    });
+  } catch (error) {
+    console.error('Failed to bulk delete connections:', error);
+    res.status(500).json({
+      error: 'Failed to bulk delete connections',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

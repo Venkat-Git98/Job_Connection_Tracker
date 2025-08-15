@@ -102,6 +102,13 @@ export const apiService = {
   deleteEmailEvent: (eventId) => api.delete(`/email/events/${eventId}`),
   bulkDeleteEmailEvents: (eventIds) => api.delete('/email/events', { data: { eventIds } }),
 
+  // Delete operations for other entities
+  deleteConnection: (profileId) => api.delete(`/connections/${profileId}`),
+  bulkDeleteConnections: (profileIds) => api.delete('/connections', { data: { profileIds } }),
+  deleteJob: (jobId) => api.delete(`/jobs/${jobId}`),
+  bulkDeleteJobs: (jobIds) => api.delete('/jobs', { data: { jobIds } }),
+  deleteCompany: (companyName) => api.delete(`/outreach/company/${encodeURIComponent(companyName)}`),
+
   // Companies
   getCompanies: (params = {}) => api.get('/outreach/summary', { params }),
   getCompanyDetails: (companyName) => api.get(`/outreach/company/${encodeURIComponent(companyName)}`),

@@ -11,6 +11,9 @@ const ConnectionsTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [stats, setStats] = useState(null);
+  const [selectedConnections, setSelectedConnections] = useState(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [connectionToDelete, setConnectionToDelete] = useState(null);
   const { showSuccess, showError } = useToast();
 
   useEffect(() => {
@@ -46,6 +49,62 @@ const ConnectionsTab = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     loadConnections();
+  };
+
+  const handleDeleteConnection = async (profileId) => {
+    setConnectionToDelete(profileId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteConnection = async () => {
+    try {
+      await apiService.deleteConnection(connectionToDelete);
+      showSuccess('Connection deleted successfully');
+      setShowDeleteConfirm(false);
+      setConnectionToDelete(null);
+      loadConnections();
+      loadStats();
+    } catch (error) {
+      console.error('Failed to delete connection:', error);
+      showError('Failed to delete connection');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedConnections.size === 0) {
+      showError('Please select connections to delete');
+      return;
+    }
+
+    try {
+      const profileIds = Array.from(selectedConnections);
+      await apiService.bulkDeleteConnections(profileIds);
+      showSuccess(`Successfully deleted ${profileIds.length} connections`);
+      setSelectedConnections(new Set());
+      loadConnections();
+      loadStats();
+    } catch (error) {
+      console.error('Failed to bulk delete connections:', error);
+      showError('Failed to delete selected connections');
+    }
+  };
+
+  const handleSelectConnection = (profileId) => {
+    const newSelected = new Set(selectedConnections);
+    if (newSelected.has(profileId)) {
+      newSelected.delete(profileId);
+    } else {
+      newSelected.add(profileId);
+    }
+    setSelectedConnections(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedConnections.size === filteredConnections.length) {
+      setSelectedConnections(new Set());
+    } else {
+      setSelectedConnections(new Set(filteredConnections.map(conn => conn.id)));
+    }
   };
 
   const handleStatusUpdate = async (profileId, newStatus) => {
@@ -105,7 +164,38 @@ const ConnectionsTab = () => {
     }
   };
 
+  // Calculate filtered connections
+  const filteredConnections = connections.filter(connection => {
+    const matchesSearch = !searchTerm || 
+      connection.personName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      connection.currentCompany?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      connection.currentTitle?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || connection.connectionStatus === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
   const columns = [
+    {
+      key: 'select',
+      label: (
+        <input
+          type="checkbox"
+          checked={selectedConnections.size === filteredConnections.length && filteredConnections.length > 0}
+          onChange={handleSelectAll}
+          style={{ margin: 0 }}
+        />
+      ),
+      render: (value, row) => (
+        <input
+          type="checkbox"
+          checked={selectedConnections.has(row.id)}
+          onChange={() => handleSelectConnection(row.id)}
+          style={{ margin: 0 }}
+        />
+      )
+    },
     {
       key: 'personName',
       label: 'Name',
@@ -178,22 +268,17 @@ const ConnectionsTab = () => {
               onClick: () => handleStatusUpdate(row.id, 'accepted'),
               variant: 'success',
               show: row.connectionStatus === 'requested'
+            },
+            {
+              label: 'Delete',
+              onClick: () => handleDeleteConnection(row.id),
+              variant: 'danger'
             }
           ].filter(item => item.show !== false)}
         />
       )
     }
   ];
-
-  const filteredConnections = connections.filter(connection => {
-    const matchesSearch = !searchTerm || 
-      connection.personName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      connection.currentCompany?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || connection.connectionStatus === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
 
   return (
     <div>
@@ -258,6 +343,37 @@ const ConnectionsTab = () => {
             Search
           </button>
         </form>
+
+        {/* Bulk Actions */}
+        {selectedConnections.size > 0 && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            padding: '12px',
+            background: 'rgba(59, 130, 246, 0.1)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '8px',
+            marginTop: '16px'
+          }}>
+            <span style={{ fontSize: '14px', fontWeight: '600' }}>
+              {selectedConnections.size} connection{selectedConnections.size !== 1 ? 's' : ''} selected
+            </span>
+            <button
+              onClick={handleBulkDelete}
+              className="btn"
+              style={{ 
+                background: '#dc3545', 
+                color: 'white', 
+                border: '1px solid #dc3545',
+                padding: '6px 12px',
+                fontSize: '14px'
+              }}
+            >
+              🗑️ Delete Selected ({selectedConnections.size})
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Connections Table */}
@@ -269,6 +385,62 @@ const ConnectionsTab = () => {
           emptyMessage="No connections found. Start by using the Chrome extension to track LinkedIn profiles."
         />
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => setShowDeleteConfirm(false)}>
+          <div style={{
+            background: 'white',
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            width: '90%',
+            maxWidth: '400px',
+            padding: '24px'
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '700' }}>
+              Confirm Delete
+            </h3>
+            
+            <p style={{ margin: '0 0 8px 0' }}>
+              Are you sure you want to delete this connection?
+            </p>
+            <p style={{ margin: '0 0 24px 0', color: '#666', fontSize: '14px' }}>
+              This action cannot be undone.
+            </p>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn"
+                style={{ 
+                  background: '#dc3545', 
+                  color: 'white', 
+                  border: '1px solid #dc3545' 
+                }}
+                onClick={confirmDeleteConnection}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

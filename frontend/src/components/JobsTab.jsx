@@ -12,6 +12,9 @@ const JobsTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [platformFilter, setPlatformFilter] = useState('all');
+  const [selectedJobs, setSelectedJobs] = useState(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [jobToDelete, setJobToDelete] = useState(null);
   const { showSuccess, showError } = useToast();
 
   useEffect(() => {
@@ -50,6 +53,60 @@ const JobsTab = () => {
     }
   };
 
+  const handleDeleteJob = async (jobId) => {
+    setJobToDelete(jobId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteJob = async () => {
+    try {
+      await apiService.deleteJob(jobToDelete);
+      showSuccess('Job deleted successfully');
+      setShowDeleteConfirm(false);
+      setJobToDelete(null);
+      loadJobs();
+    } catch (error) {
+      console.error('Failed to delete job:', error);
+      showError('Failed to delete job');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedJobs.size === 0) {
+      showError('Please select jobs to delete');
+      return;
+    }
+
+    try {
+      const jobIds = Array.from(selectedJobs);
+      await apiService.bulkDeleteJobs(jobIds);
+      showSuccess(`Successfully deleted ${jobIds.length} jobs`);
+      setSelectedJobs(new Set());
+      loadJobs();
+    } catch (error) {
+      console.error('Failed to bulk delete jobs:', error);
+      showError('Failed to delete selected jobs');
+    }
+  };
+
+  const handleSelectJob = (jobId) => {
+    const newSelected = new Set(selectedJobs);
+    if (newSelected.has(jobId)) {
+      newSelected.delete(jobId);
+    } else {
+      newSelected.add(jobId);
+    }
+    setSelectedJobs(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedJobs.size === filteredJobs.length) {
+      setSelectedJobs(new Set());
+    } else {
+      setSelectedJobs(new Set(filteredJobs.map(job => job.id)));
+    }
+  };
+
   const handleMarkApplied = async (jobUrl) => {
     try {
       await apiService.markJobAsApplied(jobUrl);
@@ -74,7 +131,38 @@ const JobsTab = () => {
     }
   };
 
+  // Calculate filtered jobs
+  const filteredJobs = jobs.filter(job => {
+    const matchesSearch = !searchTerm || 
+      job.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.companyName?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || job.applicationStatus === statusFilter;
+    const matchesPlatform = platformFilter === 'all' || job.platform === platformFilter;
+    
+    return matchesSearch && matchesStatus && matchesPlatform;
+  });
+
   const columns = [
+    {
+      key: 'select',
+      label: (
+        <input
+          type="checkbox"
+          checked={selectedJobs.size === filteredJobs.length && filteredJobs.length > 0}
+          onChange={handleSelectAll}
+          style={{ margin: 0 }}
+        />
+      ),
+      render: (value, row) => (
+        <input
+          type="checkbox"
+          checked={selectedJobs.has(row.id)}
+          onChange={() => handleSelectJob(row.id)}
+          style={{ margin: 0 }}
+        />
+      )
+    },
     {
       key: 'jobTitle',
       label: 'Job Title',
@@ -162,6 +250,11 @@ const JobsTab = () => {
                 if (note) handleAddNote(row.jobUrl, note);
               },
               variant: 'secondary'
+            },
+            {
+              label: 'Delete',
+              onClick: () => handleDeleteJob(row.id),
+              variant: 'danger'
             }
           ].filter(item => item.show !== false)}
         />
@@ -171,17 +264,6 @@ const JobsTab = () => {
 
   // Get unique platforms for filter
   const platforms = [...new Set(jobs.map(job => job.platform))].sort();
-
-  const filteredJobs = jobs.filter(job => {
-    const matchesSearch = !searchTerm || 
-      job.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.companyName?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || job.applicationStatus === statusFilter;
-    const matchesPlatform = platformFilter === 'all' || job.platform === platformFilter;
-    
-    return matchesSearch && matchesStatus && matchesPlatform;
-  });
 
   // Calculate stats
   const stats = {
@@ -275,6 +357,37 @@ const JobsTab = () => {
             Search
           </button>
         </form>
+
+        {/* Bulk Actions */}
+        {selectedJobs.size > 0 && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            padding: '12px',
+            background: 'rgba(59, 130, 246, 0.1)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '8px',
+            marginTop: '16px'
+          }}>
+            <span style={{ fontSize: '14px', fontWeight: '600' }}>
+              {selectedJobs.size} job{selectedJobs.size !== 1 ? 's' : ''} selected
+            </span>
+            <button
+              onClick={handleBulkDelete}
+              className="btn"
+              style={{ 
+                background: '#dc3545', 
+                color: 'white', 
+                border: '1px solid #dc3545',
+                padding: '6px 12px',
+                fontSize: '14px'
+              }}
+            >
+              🗑️ Delete Selected ({selectedJobs.size})
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Jobs Table */}
@@ -319,6 +432,62 @@ const JobsTab = () => {
           </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => setShowDeleteConfirm(false)}>
+          <div style={{
+            background: 'white',
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            width: '90%',
+            maxWidth: '400px',
+            padding: '24px'
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '700' }}>
+              Confirm Delete
+            </h3>
+            
+            <p style={{ margin: '0 0 8px 0' }}>
+              Are you sure you want to delete this job?
+            </p>
+            <p style={{ margin: '0 0 24px 0', color: '#666', fontSize: '14px' }}>
+              This action cannot be undone and will also delete any related email events.
+            </p>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn"
+                style={{ 
+                  background: '#dc3545', 
+                  color: 'white', 
+                  border: '1px solid #dc3545' 
+                }}
+                onClick={confirmDeleteJob}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

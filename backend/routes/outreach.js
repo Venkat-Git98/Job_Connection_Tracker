@@ -206,4 +206,53 @@ router.get('/company/:companyName', async (req, res) => {
   }
 });
 
+// Delete company (removes all profiles from that company)
+router.delete('/company/:companyName', async (req, res) => {
+  try {
+    const { companyName } = req.params;
+    
+    if (!companyName) {
+      return res.status(400).json({
+        error: 'Company name is required'
+      });
+    }
+    
+    const decodedCompanyName = decodeURIComponent(companyName);
+    const pool = require('../config/database');
+    
+    // First check if the company exists
+    const checkQuery = 'SELECT COUNT(*) as count FROM profiles WHERE current_company = $1 AND user_id = $2';
+    const checkResult = await pool.query(checkQuery, [decodedCompanyName, req.user.id]);
+    
+    if (checkResult.rows[0].count === '0') {
+      return res.status(404).json({
+        error: 'Company not found'
+      });
+    }
+    
+    // Delete all profiles from this company
+    const deleteQuery = 'DELETE FROM profiles WHERE current_company = $1 AND user_id = $2 RETURNING id, person_name';
+    const deleteResult = await pool.query(deleteQuery, [decodedCompanyName, req.user.id]);
+    
+    console.log(`🗑️ Deleted company: ${decodedCompanyName} (${deleteResult.rows.length} profiles)`);
+    
+    res.json({
+      success: true,
+      message: `Successfully deleted company "${decodedCompanyName}" and ${deleteResult.rows.length} associated profiles`,
+      deletedCompany: decodedCompanyName,
+      deletedProfilesCount: deleteResult.rows.length,
+      deletedProfiles: deleteResult.rows.map(row => ({
+        id: row.id,
+        name: row.person_name
+      }))
+    });
+  } catch (error) {
+    console.error('Failed to delete company:', error);
+    res.status(500).json({
+      error: 'Failed to delete company',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;
