@@ -134,6 +134,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (response.data.classification === 'linkedin_profile') {
           generateConnectionBtn.classList.remove('hidden');
           messageSection.classList.remove('hidden');
+        } else if (response.data.classification === 'linkedin_company') {
+          // Company page - show success message as company is automatically added
+          showStatus('success', `Company "${response.data.extractedData.companyName}" has been added to your tracking list!`);
         } else if (response.data.classification === 'job_application') {
           markAppliedBtn.classList.remove('hidden');
         }
@@ -457,6 +460,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Style the page type badge
     const typeText = data.classification === 'linkedin_profile' ? '👤 LinkedIn Profile' : 
+                    data.classification === 'linkedin_company' ? '🏢 LinkedIn Company' :
                     data.classification === 'job_application' ? '💼 Job Posting' : 
                     '❓ Unknown Page';
     pageTypeEl.textContent = typeText;

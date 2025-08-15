@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microsoft | LinkedIn</title>
+    <meta property="og:title" content="Microsoft">
+    <meta property="og:site_name" content="LinkedIn">
+</head>
+<body>
+    <!-- Simulate LinkedIn company page structure -->
+    <h1 data-test-id="org-name">Microsoft</h1>
+    <div data-test-id="org-industry">Computer Software</div>
+    <div data-test-id="org-location">Redmond, Washington</div>
+    <div data-test-id="org-employees">100,000+ employees</div>
+    <div class="org-about-us-organization-description__text">
+        Microsoft Corporation is an American multinational technology company with headquarters in Redmond, Washington. 
+        It develops, manufactures, licenses, supports, and sells computer software, consumer electronics, personal computers, 
+        and related services.
+    </div>
+    <a data-test-id="org-website-url" href="https://www.microsoft.com">https://www.microsoft.com</a>
+    <div data-test-id="org-founded">Founded 1975</div>
+    
+    <script>
+        // Simulate LinkedIn company page URL
+        console.log('Test LinkedIn company page loaded');
+        console.log('URL:', window.location.href);
+        console.log('Title:', document.title);
+        
+        // Change URL to simulate LinkedIn company page
+        if (!window.location.href.includes('linkedin.com/company/')) {
+            console.log('Note: This is a test page. In real usage, navigate to https://linkedin.com/company/microsoft');
+        }
+    </script>
+</body>
+</html>

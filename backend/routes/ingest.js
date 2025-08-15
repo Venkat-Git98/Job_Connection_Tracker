@@ -41,6 +41,59 @@ router.post('/page', async (req, res) => {
         message: 'Profile data stored successfully'
       });
 
+    } else if (finalClassification === 'linkedin_company') {
+      console.log('🏢 Processing LinkedIn company data:', extractedData);
+      
+      // Normalize and validate company data
+      const normalizedData = extractionService.normalizeCompanyData(extractedData);
+      console.log('🔧 Normalized company data:', normalizedData);
+      
+      const { error, value } = extractionService.validateCompanyData(normalizedData);
+      
+      if (error) {
+        console.error('❌ Company data validation failed:', error.details);
+        return res.status(400).json({
+          error: 'Invalid company data',
+          details: error.details.map(d => d.message),
+          receivedData: extractedData,
+          normalizedData: normalizedData
+        });
+      }
+
+      console.log('✅ Company data validated successfully:', value);
+
+      // Add company using existing API
+      try {
+        const addCompanyResult = await fetch(`${req.protocol}://${req.get('host')}/api/outreach/add-company`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-ID': req.user.id.toString()
+          },
+          body: JSON.stringify({ companyName: value.companyName })
+        });
+
+        if (addCompanyResult.ok) {
+          const companyData = await addCompanyResult.json();
+          console.log('💾 Company added successfully:', companyData);
+          
+          res.json({
+            success: true,
+            type: 'company',
+            data: { ...companyData, ...value },
+            message: `Company "${value.companyName}" added successfully`
+          });
+        } else {
+          throw new Error('Failed to add company to database');
+        }
+      } catch (dbError) {
+        console.error('❌ Failed to add company:', dbError);
+        res.status(500).json({
+          error: 'Failed to add company to database',
+          message: dbError.message
+        });
+      }
+
     } else if (finalClassification === 'job_application') {
       console.log('💼 Processing job application data:', extractedData);
       

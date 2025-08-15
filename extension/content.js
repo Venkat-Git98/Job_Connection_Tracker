@@ -74,18 +74,45 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 async function extractPageData(url, title) {
   try {
+    console.log('🔍 Starting page data extraction for:', url);
+    
     const classification = classifyPage(url, title);
+    console.log('🏷️ Page classified as:', classification);
+    
     let extractedData = {};
 
     if (classification === 'linkedin_profile') {
       extractedData = extractLinkedInProfile();
+    } else if (classification === 'linkedin_company') {
+      extractedData = extractLinkedInCompany();
+      
+      // Validate extracted company data before returning
+      if (!extractedData.companyName || extractedData.companyName.length < 2) {
+        console.warn('⚠️ Company name missing or invalid, using page title');
+        extractedData.companyName = title.split('|')[0].trim() || 'Unknown Company';
+      }
+      
+      console.log('✅ Final company data:', extractedData);
     } else if (classification === 'job_application') {
       extractedData = extractJobPosting(url);
+      
+      // Validate extracted job data before returning
+      if (!extractedData.jobTitle || extractedData.jobTitle.length < 2) {
+        console.warn('⚠️ Job title missing or invalid, using page title');
+        extractedData.jobTitle = title || 'Job Position';
+      }
+      
+      if (!extractedData.companyName || extractedData.companyName.length < 2) {
+        console.warn('⚠️ Company name missing or invalid, using fallback');
+        extractedData.companyName = extractCompanyFromUrl(url) || 'Company';
+      }
+      
+      console.log('✅ Final job data:', extractedData);
     } else {
       extractedData = extractGenericData();
     }
 
-    return {
+    const result = {
       success: true,
       data: {
         classification,
@@ -95,8 +122,12 @@ async function extractPageData(url, title) {
         extractedData
       }
     };
+    
+    console.log('✅ Extraction successful:', result);
+    return result;
+    
   } catch (error) {
-    console.error('Content script extraction error:', error);
+    console.error('❌ Content script extraction error:', error);
     return {
       success: false,
       error: error.message
@@ -114,6 +145,12 @@ function classifyPage(url, title) {
   if (urlLower.includes('linkedin.com/in/')) {
     console.log('✅ Classified as: linkedin_profile');
     return 'linkedin_profile';
+  }
+  
+  // LinkedIn company page detection
+  if (urlLower.includes('linkedin.com/company/')) {
+    console.log('✅ Classified as: linkedin_company');
+    return 'linkedin_company';
   }
   
   // Job posting detection - expanded patterns
@@ -727,11 +764,22 @@ function extractJobPosting(url) {
     }
 
     // Clean up extracted data
-    data.jobTitle = data.jobTitle.replace(/\s+/g, ' ').trim();
-    data.companyName = data.companyName.replace(/\s+/g, ' ').trim();
-    data.location = data.location.replace(/\s+/g, ' ').trim();
+    data.jobTitle = data.jobTitle ? data.jobTitle.replace(/\s+/g, ' ').trim() : '';
+    data.companyName = data.companyName ? data.companyName.replace(/\s+/g, ' ').trim() : '';
+    data.location = data.location ? data.location.replace(/\s+/g, ' ').trim() : '';
 
-    console.log('💼 Extracted job data:', data);
+    // Final validation - ensure we have minimum required data
+    if (!data.jobTitle || data.jobTitle.length < 2) {
+      console.warn('⚠️ Job title is missing or too short, using page title');
+      data.jobTitle = document.title || 'Unknown Job Title';
+    }
+    
+    if (!data.companyName || data.companyName.length < 2) {
+      console.warn('⚠️ Company name is missing, trying to extract from URL');
+      data.companyName = extractCompanyFromUrl(data.jobUrl) || 'Unknown Company';
+    }
+
+    console.log('💼 Final extracted job data:', data);
     return data;
   } catch (error) {
     console.error('❌ Error extracting job posting:', error);
@@ -772,6 +820,219 @@ function extractPlatform(url) {
     return hostname.replace('www.', '');
   } catch {
     return 'unknown';
+  }
+}
+
+function extractCompanyFromUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    
+    // Company-specific URL patterns
+    if (hostname.includes('greenhouse.io')) {
+      const pathParts = urlObj.pathname.split('/');
+      if (pathParts[1]) {
+        return formatCompanyName(pathParts[1]);
+      }
+    }
+    
+    if (hostname.includes('lever.co')) {
+      const pathParts = urlObj.pathname.split('/');
+      if (pathParts[1]) {
+        return formatCompanyName(pathParts[1]);
+      }
+    }
+    
+    if (hostname.includes('workday.com')) {
+      const subdomain = hostname.split('.')[0];
+      if (subdomain !== 'www') {
+        return formatCompanyName(subdomain);
+      }
+    }
+    
+    // Generic subdomain extraction
+    const parts = hostname.split('.');
+    if (parts.length > 2 && parts[0] !== 'www') {
+      return formatCompanyName(parts[0]);
+    }
+    
+  } catch (error) {
+    console.warn('Failed to extract company from URL:', url, error);
+  }
+  
+  return null;
+}
+
+function formatCompanyName(rawName) {
+  return rawName
+    .replace(/[-_]/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function extractLinkedInCompany() {
+  try {
+    console.log('🏢 Extracting LinkedIn company data...');
+    
+    const data = {
+      companyName: '',
+      companyUrl: window.location.href,
+      industry: '',
+      location: '',
+      employeeCount: '',
+      description: '',
+      website: '',
+      founded: ''
+    };
+
+    // Extract company name - try multiple selectors
+    const nameSelectors = [
+      'h1[data-test-id="org-name"]',
+      'h1.org-top-card-summary__title',
+      '.org-top-card-summary__title',
+      'h1.t-24.t-black.t-normal',
+      '.pv-entity__company-summary-info h1',
+      'h1'
+    ];
+    
+    for (const selector of nameSelectors) {
+      const nameEl = document.querySelector(selector);
+      if (nameEl && nameEl.textContent.trim()) {
+        data.companyName = nameEl.textContent.trim();
+        console.log('✅ Found company name:', data.companyName);
+        break;
+      }
+    }
+
+    // Extract industry
+    const industrySelectors = [
+      '[data-test-id="org-industry"]',
+      '.org-top-card-summary__industry',
+      '.org-page-details__definition-text'
+    ];
+    
+    for (const selector of industrySelectors) {
+      const industryEl = document.querySelector(selector);
+      if (industryEl && industryEl.textContent.trim()) {
+        data.industry = industryEl.textContent.trim();
+        console.log('✅ Found industry:', data.industry);
+        break;
+      }
+    }
+
+    // Extract location
+    const locationSelectors = [
+      '[data-test-id="org-location"]',
+      '.org-top-card-summary__headquarter',
+      '.org-page-details__definition-text'
+    ];
+    
+    for (const selector of locationSelectors) {
+      const locationEl = document.querySelector(selector);
+      if (locationEl && locationEl.textContent.trim()) {
+        const locationText = locationEl.textContent.trim();
+        if (locationText.includes('headquarter') || locationText.includes('location')) {
+          data.location = locationText;
+          console.log('✅ Found location:', data.location);
+          break;
+        }
+      }
+    }
+
+    // Extract employee count
+    const employeeSelectors = [
+      '[data-test-id="org-employees"]',
+      '.org-top-card-summary__follower-count',
+      '.org-page-details__definition-text'
+    ];
+    
+    for (const selector of employeeSelectors) {
+      const employeeEl = document.querySelector(selector);
+      if (employeeEl && employeeEl.textContent.trim()) {
+        const employeeText = employeeEl.textContent.trim();
+        if (employeeText.includes('employee') || employeeText.includes('people')) {
+          data.employeeCount = employeeText;
+          console.log('✅ Found employee count:', data.employeeCount);
+          break;
+        }
+      }
+    }
+
+    // Extract description/about
+    const descriptionSelectors = [
+      '.org-about-us-organization-description__text',
+      '.org-about-company-module__company-description',
+      '[data-test-id="org-about-us-description"]',
+      '.break-words'
+    ];
+    
+    for (const selector of descriptionSelectors) {
+      const descEl = document.querySelector(selector);
+      if (descEl && descEl.textContent.trim() && descEl.textContent.trim().length > 50) {
+        data.description = descEl.textContent.trim();
+        console.log('✅ Found description:', data.description.substring(0, 100) + '...');
+        break;
+      }
+    }
+
+    // Extract website
+    const websiteSelectors = [
+      'a[data-test-id="org-website-url"]',
+      '.org-top-card-summary__website a',
+      '.org-page-details__definition-text a'
+    ];
+    
+    for (const selector of websiteSelectors) {
+      const websiteEl = document.querySelector(selector);
+      if (websiteEl && websiteEl.href) {
+        data.website = websiteEl.href;
+        console.log('✅ Found website:', data.website);
+        break;
+      }
+    }
+
+    // Extract founded year
+    const foundedSelectors = [
+      '[data-test-id="org-founded"]',
+      '.org-page-details__definition-text'
+    ];
+    
+    for (const selector of foundedSelectors) {
+      const foundedEl = document.querySelector(selector);
+      if (foundedEl && foundedEl.textContent.trim()) {
+        const foundedText = foundedEl.textContent.trim();
+        const yearMatch = foundedText.match(/\d{4}/);
+        if (yearMatch) {
+          data.founded = yearMatch[0];
+          console.log('✅ Found founded year:', data.founded);
+          break;
+        }
+      }
+    }
+
+    // Fallback to page title if company name not found
+    if (!data.companyName) {
+      const titleParts = document.title.split('|')[0].trim();
+      data.companyName = titleParts || 'Unknown Company';
+      console.log('📄 Using title fallback for company name:', data.companyName);
+    }
+
+    console.log('🏢 Final extracted company data:', data);
+    return data;
+    
+  } catch (error) {
+    console.error('❌ Error extracting LinkedIn company:', error);
+    return {
+      companyName: document.title.split('|')[0].trim() || 'Unknown Company',
+      companyUrl: window.location.href,
+      industry: '',
+      location: '',
+      employeeCount: '',
+      description: '',
+      website: '',
+      founded: ''
+    };
   }
 }
 

@@ -30,14 +30,14 @@ class ExtractionService {
 
   validateJobData(data) {
     const schema = Joi.object({
-      jobTitle: Joi.string().min(1).required().max(255).messages({
+      jobTitle: Joi.string().min(2).required().max(255).messages({
         'string.empty': 'Job title cannot be empty',
-        'string.min': 'Job title must be at least 1 character',
+        'string.min': 'Job title must be at least 2 characters',
         'any.required': 'Job title is required'
       }),
-      companyName: Joi.string().min(1).required().max(255).messages({
+      companyName: Joi.string().min(2).required().max(255).messages({
         'string.empty': 'Company name cannot be empty',
-        'string.min': 'Company name must be at least 1 character',
+        'string.min': 'Company name must be at least 2 characters',
         'any.required': 'Company name is required'
       }),
       platform: Joi.string().required().max(100),
@@ -48,6 +48,28 @@ class ExtractionService {
       location: Joi.string().allow('').max(255),
       postedDate: Joi.any().allow('', null),
       applicationStatus: Joi.string().valid('viewed', 'applied', 'interviewing', 'rejected', 'offer').default('viewed')
+    });
+
+    return schema.validate(data);
+  }
+
+  validateCompanyData(data) {
+    const schema = Joi.object({
+      companyName: Joi.string().min(2).required().max(255).messages({
+        'string.empty': 'Company name cannot be empty',
+        'string.min': 'Company name must be at least 2 characters',
+        'any.required': 'Company name is required'
+      }),
+      companyUrl: Joi.string().uri().required().max(500).messages({
+        'string.uri': 'Company URL must be a valid URL',
+        'any.required': 'Company URL is required'
+      }),
+      industry: Joi.string().allow('').max(255),
+      location: Joi.string().allow('').max(255),
+      employeeCount: Joi.string().allow('').max(100),
+      description: Joi.string().allow('').max(2000),
+      website: Joi.string().allow('').max(500),
+      founded: Joi.string().allow('').max(10)
     });
 
     return schema.validate(data);
@@ -90,7 +112,50 @@ class ExtractionService {
     normalized.companyName = this.enhanceCompanyName(normalized.companyName, normalized.jobUrl);
     normalized.location = this.enhanceLocation(normalized.location);
     
+    // Final validation and fallbacks
+    if (!normalized.jobTitle || normalized.jobTitle.length < 2) {
+      normalized.jobTitle = 'Job Position'; // Fallback title
+      console.warn('⚠️ Using fallback job title');
+    }
+    
+    if (!normalized.companyName || normalized.companyName.length < 2) {
+      // Try to extract from URL as last resort
+      const urlCompany = this.extractCompanyFromUrl(normalized.jobUrl);
+      normalized.companyName = urlCompany || 'Company'; // Fallback company
+      console.warn('⚠️ Using fallback company name:', normalized.companyName);
+    }
+    
     console.log('✅ Normalized job data:', normalized);
+    return normalized;
+  }
+
+  normalizeCompanyData(rawData) {
+    console.log('🔧 Normalizing company data:', rawData);
+    
+    const normalized = {
+      companyName: this.sanitizeString(rawData.companyName || ''),
+      companyUrl: this.sanitizeUrl(rawData.companyUrl || ''),
+      industry: this.sanitizeString(rawData.industry || ''),
+      location: this.normalizeLocation(rawData.location || ''),
+      employeeCount: this.sanitizeString(rawData.employeeCount || ''),
+      description: this.sanitizeString(rawData.description || ''),
+      website: this.sanitizeUrl(rawData.website || ''),
+      founded: this.sanitizeString(rawData.founded || '')
+    };
+
+    // Enhanced data quality improvements
+    normalized.companyName = this.enhanceCompanyName(normalized.companyName, normalized.companyUrl);
+    normalized.location = this.enhanceLocation(normalized.location);
+    
+    // Final validation and fallbacks
+    if (!normalized.companyName || normalized.companyName.length < 2) {
+      // Try to extract from URL as last resort
+      const urlCompany = this.extractCompanyFromUrl(normalized.companyUrl);
+      normalized.companyName = urlCompany || 'Company'; // Fallback company
+      console.warn('⚠️ Using fallback company name:', normalized.companyName);
+    }
+    
+    console.log('✅ Normalized company data:', normalized);
     return normalized;
   }
 
@@ -374,6 +439,11 @@ class ExtractionService {
     // LinkedIn profile detection
     if (urlLower.includes('linkedin.com/in/')) {
       return 'linkedin_profile';
+    }
+    
+    // LinkedIn company page detection
+    if (urlLower.includes('linkedin.com/company/')) {
+      return 'linkedin_company';
     }
     
     // Job posting detection - expanded patterns
