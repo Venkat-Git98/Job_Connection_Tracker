@@ -11,5 +11,6 @@ router.use('/connections', require('./connections'));
 router.use('/outreach', require('./outreach'));
 router.use('/email', require('./email'));
 router.use('/analytics', require('./analytics'));
+router.use('/admin', require('./admin'));
 
 module.exports = router;

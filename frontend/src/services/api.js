@@ -121,6 +121,11 @@ export const apiService = {
   getRecentActivity: () => api.get('/analytics/dashboard'),
   getAnalytics: (params = {}) => api.get('/analytics/dashboard', { params }),
 
+  // Admin operations
+  getDatabaseStats: () => api.get('/admin/stats'),
+  cleanupAllData: () => api.post('/admin/cleanup/all'),
+  cleanupDummyData: () => api.post('/admin/cleanup/dummy'),
+
   // Health check
   healthCheck: () => api.get('/health', { baseURL: API_BASE_URL.replace('/api', '') }),
 };
