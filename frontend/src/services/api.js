@@ -94,8 +94,11 @@ export const apiService = {
   getEmailEvents: (params = {}) => api.get('/email/events', { params }),
   getEmailMonitoringStatus: () => api.get('/email/status'),
   checkEmailsNow: () => api.post('/email/check-now'),
-  startEmailMonitoring: (intervalMinutes = 5) => 
+  startEmailMonitoring: (intervalMinutes = 60) => 
     api.post('/email/start-monitoring', { intervalMinutes }),
+  stopEmailMonitoring: () => api.post('/email/stop-monitoring'),
+  getEmailClassificationStats: () => api.get('/email/classification-stats'),
+  submitEmailClassificationFeedback: (data) => api.post('/email/classification-feedback', data),
 
   // Companies
   getCompanies: (params = {}) => api.get('/outreach/summary', { params }),

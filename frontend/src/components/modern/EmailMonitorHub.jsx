@@ -127,13 +127,25 @@ const EmailMonitorHub = () => {
 
   const handleStartMonitoring = async () => {
     try {
-      await apiService.startEmailMonitoring(5) // Check every 5 minutes
-      showSuccess('Email monitoring started successfully')
+      await apiService.startEmailMonitoring(60) // Check every 60 minutes (1 hour)
+      showSuccess('Email monitoring started successfully (checking every hour)')
       setIsMonitoring(true)
       loadMonitoringStatus()
     } catch (error) {
       console.error('Failed to start monitoring:', error)
       showError('Failed to start email monitoring')
+    }
+  }
+
+  const handleStopMonitoring = async () => {
+    try {
+      await apiService.stopEmailMonitoring()
+      showSuccess('Email monitoring stopped')
+      setIsMonitoring(false)
+      loadMonitoringStatus()
+    } catch (error) {
+      console.error('Failed to stop monitoring:', error)
+      showError('Failed to stop email monitoring')
     }
   }
 
@@ -305,20 +317,34 @@ const EmailMonitorHub = () => {
               onClick={handleStartMonitoring}
               className="btn btn-success"
             >
-              ▶️ Start Monitoring
+              ▶️ Start Hourly Monitoring
             </button>
           ) : (
             <div className="monitoring-info">
               <span className="monitoring-text">
-                ✅ Monitoring every 5 minutes
+                ✅ Monitoring every hour
               </span>
               {monitoringStatus?.lastChecked && (
                 <span className="last-check">
                   Last check: {new Date(monitoringStatus.lastChecked).toLocaleTimeString()}
                 </span>
               )}
+              <button
+                onClick={handleStopMonitoring}
+                className="btn btn-sm btn-danger"
+                style={{ marginTop: 'var(--space-2)' }}
+              >
+                ⏹️ Stop Monitoring
+              </button>
             </div>
           )}
+          
+          <button
+            onClick={() => window.location.hash = '#email-classification'}
+            className="btn btn-secondary"
+          >
+            🤖 AI Classification Stats
+          </button>
         </div>
 
         {/* Search and Filters */}
@@ -379,7 +405,7 @@ const EmailMonitorHub = () => {
               <div className="instruction-number">2</div>
               <div className="instruction-content">
                 <h4>Start Monitoring</h4>
-                <p>Click "Start Monitoring" to begin automatic email scanning every 5 minutes.</p>
+                <p>Click "Start Hourly Monitoring" to begin automatic email scanning every hour.</p>
               </div>
             </div>
             <div className="instruction-item">

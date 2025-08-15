@@ -5,7 +5,7 @@ const gmailImapService = require('../services/gmailImapService');
 // Start email monitoring
 router.post('/start-monitoring', async (req, res) => {
   try {
-    const { intervalMinutes = 5 } = req.body;
+    const { intervalMinutes = 60 } = req.body; // Default to 60 minutes (1 hour)
     
     await gmailImapService.startMonitoring(intervalMinutes);
     
@@ -18,6 +18,24 @@ router.post('/start-monitoring', async (req, res) => {
     console.error('Failed to start email monitoring:', error);
     res.status(500).json({
       error: 'Failed to start email monitoring',
+      message: error.message
+    });
+  }
+});
+
+// Stop email monitoring
+router.post('/stop-monitoring', async (req, res) => {
+  try {
+    gmailImapService.stopMonitoring();
+    
+    res.json({
+      success: true,
+      message: 'Email monitoring stopped'
+    });
+  } catch (error) {
+    console.error('Failed to stop email monitoring:', error);
+    res.status(500).json({
+      error: 'Failed to stop email monitoring',
       message: error.message
     });
   }
@@ -139,6 +157,52 @@ router.get('/status', (req, res) => {
       monitoring: true // You can add a flag to track if monitoring is active
     }
   });
+});
+
+// Get email classification statistics
+router.get('/classification-stats', (req, res) => {
+  try {
+    const emailClassificationService = require('../services/emailClassificationService');
+    const stats = emailClassificationService.getClassificationStats();
+    
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    console.error('Failed to get classification stats:', error);
+    res.status(500).json({
+      error: 'Failed to get classification statistics',
+      message: error.message
+    });
+  }
+});
+
+// Provide feedback on email classification
+router.post('/classification-feedback', async (req, res) => {
+  try {
+    const { emailId, correctType, feedback } = req.body;
+    
+    if (!emailId || !correctType) {
+      return res.status(400).json({
+        error: 'Email ID and correct type are required'
+      });
+    }
+    
+    const emailClassificationService = require('../services/emailClassificationService');
+    await emailClassificationService.improveClassification(emailId, correctType, feedback);
+    
+    res.json({
+      success: true,
+      message: 'Classification feedback recorded'
+    });
+  } catch (error) {
+    console.error('Failed to record classification feedback:', error);
+    res.status(500).json({
+      error: 'Failed to record feedback',
+      message: error.message
+    });
+  }
 });
 
 module.exports = router;
