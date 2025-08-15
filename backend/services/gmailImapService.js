@@ -275,7 +275,6 @@ class GmailImapService {
       'mailgun.org', 'amazonses.com', 'sparkpost.com'
     ];
     
-    const fromDomain = this.extractDomain(from);
     if (marketingDomains.some(domain => fromDomain.includes(domain))) {
       return true; // Marketing email
     }
