@@ -42,16 +42,32 @@ const CompaniesTab = () => {
 
   const handleAddCompany = async (e) => {
     e.preventDefault();
-    if (!newCompanyName.trim()) return;
+    if (!newCompanyName.trim()) {
+      showError('Please enter a company name');
+      return;
+    }
 
     try {
-      await apiService.addCompany(newCompanyName.trim());
+      console.log('Adding company:', newCompanyName.trim());
+      const response = await apiService.addCompany(newCompanyName.trim());
+      console.log('Add company response:', response);
+      
       showSuccess(`Company "${newCompanyName}" added successfully`);
       setNewCompanyName('');
       loadData();
     } catch (error) {
       console.error('Failed to add company:', error);
-      showError(error.response?.data?.message || 'Failed to add company');
+      
+      // More detailed error handling
+      if (error.response?.status === 409) {
+        showError(`Company "${newCompanyName}" already exists`);
+      } else if (error.response?.status === 400) {
+        showError(error.response.data?.message || 'Invalid company name');
+      } else if (error.response?.status === 401) {
+        showError('Please select a user profile first');
+      } else {
+        showError(error.response?.data?.message || error.message || 'Failed to add company');
+      }
     }
   };
 

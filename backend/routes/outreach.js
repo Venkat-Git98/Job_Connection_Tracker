@@ -2,10 +2,25 @@ const express = require('express');
 const router = express.Router();
 const databaseService = require('../services/databaseService');
 
+// Helper function to check if user_id column exists
+async function checkUserIdColumn(pool, tableName) {
+  try {
+    const result = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = $1 AND column_name = 'user_id'
+    `, [tableName]);
+    return result.rows.length > 0;
+  } catch (error) {
+    return false;
+  }
+}
+
 // Get outreach data grouped by company
 router.get('/', async (req, res) => {
   try {
-    const companies = await databaseService.getOutreachByCompany(req.user.id);
+    const userId = req.user?.id || 1; // Default to 1 if no user context
+    const companies = await databaseService.getOutreachByCompany(userId);
 
     // Format the response
     const formattedCompanies = companies.map(company => ({
@@ -100,15 +115,24 @@ router.post('/add-company', async (req, res) => {
       });
     }
 
-    // Check if company already exists
-    const checkQuery = `
+    const pool = require('../config/database');
+    
+    // Check if profiles table has user_id column
+    const hasUserIdColumn = await checkUserIdColumn(pool, 'profiles');
+    
+    // Check if company already exists (for current user if multi-user, globally if single-user)
+    const checkQuery = hasUserIdColumn ? `
+      SELECT COUNT(*) as count 
+      FROM profiles 
+      WHERE current_company ILIKE $1 AND user_id = $2;
+    ` : `
       SELECT COUNT(*) as count 
       FROM profiles 
       WHERE current_company ILIKE $1;
     `;
 
-    const pool = require('../config/database');
-    const checkResult = await pool.query(checkQuery, [trimmedCompanyName]);
+    const checkParams = hasUserIdColumn ? [trimmedCompanyName, req.user?.id || 1] : [trimmedCompanyName];
+    const checkResult = await pool.query(checkQuery, checkParams);
     
     if (parseInt(checkResult.rows[0].count) > 0) {
       return res.status(409).json({
@@ -118,7 +142,12 @@ router.post('/add-company', async (req, res) => {
     }
 
     // Create a placeholder profile for the company
-    const insertQuery = `
+    const insertQuery = hasUserIdColumn ? `
+      INSERT INTO profiles (
+        person_name, profile_url, current_company, headline, last_seen_at, user_id
+      ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5)
+      RETURNING *;
+    ` : `
       INSERT INTO profiles (
         person_name, profile_url, current_company, headline, last_seen_at
       ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
@@ -126,12 +155,20 @@ router.post('/add-company', async (req, res) => {
     `;
 
     const placeholderUrl = `https://linkedin.com/company/${trimmedCompanyName.toLowerCase().replace(/\s+/g, '-')}`;
-    const result = await pool.query(insertQuery, [
+    const insertParams = hasUserIdColumn ? [
+      `${trimmedCompanyName} - Company Placeholder`,
+      placeholderUrl,
+      trimmedCompanyName,
+      'Company placeholder for tracking purposes',
+      req.user?.id || 1
+    ] : [
       `${trimmedCompanyName} - Company Placeholder`,
       placeholderUrl,
       trimmedCompanyName,
       'Company placeholder for tracking purposes'
-    ]);
+    ];
+    
+    const result = await pool.query(insertQuery, insertParams);
 
     res.json({
       success: true,

@@ -164,10 +164,13 @@ class DatabaseService {
 
   async getOutreachByCompany(userId) {
     if (!userId) {
-      throw new Error('User ID is required for outreach operations');
+      userId = 1; // Default fallback
     }
 
-    const query = `
+    // Check if profiles table has user_id column
+    const hasUserIdColumn = await this.checkUserIdColumn('profiles');
+    
+    const query = hasUserIdColumn ? `
       SELECT p.current_company, 
              json_agg(
                json_build_object(
@@ -184,10 +187,41 @@ class DatabaseService {
       WHERE p.current_company IS NOT NULL AND p.user_id = $1
       GROUP BY p.current_company
       ORDER BY p.current_company;
+    ` : `
+      SELECT p.current_company, 
+             json_agg(
+               json_build_object(
+                 'id', p.id,
+                 'person_name', p.person_name,
+                 'profile_url', p.profile_url,
+                 'current_title', p.current_title,
+                 'connection_status', o.connection_status,
+                 'last_contact_date', o.last_contact_date
+               )
+             ) as profiles
+      FROM profiles p
+      LEFT JOIN outreach o ON p.id = o.profile_id
+      WHERE p.current_company IS NOT NULL
+      GROUP BY p.current_company
+      ORDER BY p.current_company;
     `;
 
-    const result = await pool.query(query, [userId]);
+    const params = hasUserIdColumn ? [userId] : [];
+    const result = await pool.query(query, params);
     return result.rows;
+  }
+
+  async checkUserIdColumn(tableName) {
+    try {
+      const result = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = $1 AND column_name = 'user_id'
+      `, [tableName]);
+      return result.rows.length > 0;
+    } catch (error) {
+      return false;
+    }
   }
 
   async markJobAsApplied(jobUrl, userId) {

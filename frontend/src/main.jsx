@@ -121,18 +121,16 @@ root.render(
   </React.StrictMode>
 )
 
-// Service worker registration (disabled - not needed for this app)
-// if ('serviceWorker' in navigator && import.meta.env.PROD) {
-//   window.addEventListener('load', () => {
-//     navigator.serviceWorker.register('/sw.js')
-//       .then((registration) => {
-//         console.log('SW registered: ', registration)
-//       })
-//       .catch((registrationError) => {
-//         console.log('SW registration failed: ', registrationError)
-//       })
-//   })
-// }
+// Service worker cleanup (remove any existing service workers)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      registration.unregister().then(() => {
+        console.log('🧹 Unregistered service worker:', registration.scope);
+      });
+    }
+  });
+}
 
 // Performance monitoring
 if (import.meta.env.DEV) {

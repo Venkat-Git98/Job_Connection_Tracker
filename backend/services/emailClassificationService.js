@@ -1,4 +1,4 @@
-const geminiService = require('./geminiService');
+// const geminiService = require('./geminiService'); // Disabled - using pattern-based classification only
 
 class EmailClassificationService {
   constructor() {
@@ -6,22 +6,9 @@ class EmailClassificationService {
   }
 
   async classifyEmailWithAI(emailData) {
-    const { subject, from, text } = emailData;
-    
-    try {
-      const prompt = this.buildClassificationPrompt(emailData);
-      const result = await geminiService.model.generateContent(prompt);
-      const response = await result.response;
-      const classification = this.parseAIClassification(response.text());
-      
-      // Store for learning
-      this.storeClassificationResult(emailData, classification);
-      
-      return classification;
-    } catch (error) {
-      console.error('AI classification failed:', error);
-      return null;
-    }
+    // AI classification disabled - using pattern-based classification only
+    console.log('🚫 AI classification disabled, using pattern-based classification only');
+    return null;
   }
 
   buildClassificationPrompt(emailData) {
@@ -194,51 +181,29 @@ Respond in JSON format:
     }
   }
 
-  // Hybrid classification combining AI and pattern matching
+  // Pattern-only classification (AI disabled)
   async hybridClassification(emailData, patternResult) {
-    // If pattern matching is very confident and from trusted source, use it
-    if (patternResult && patternResult.confidence >= 90 && patternResult.senderAnalysis?.isRecruitingRelated) {
-      return patternResult;
-    }
-    
-    // Otherwise, use AI classification
-    const aiResult = await this.classifyEmailWithAI(emailData);
-    
-    if (!aiResult || !aiResult.isJobRelated) {
-      return null;
-    }
-    
-    // Combine results if both exist
-    if (patternResult && aiResult) {
+    // Use only pattern-based classification - no AI
+    if (patternResult && patternResult.confidence >= 70) {
+      console.log(`✅ Email classified using patterns: ${patternResult.type} (${patternResult.confidence}% confidence)`);
       return {
-        type: aiResult.type,
-        company: aiResult.company || patternResult.company,
-        jobTitle: aiResult.jobTitle || patternResult.jobTitle,
-        confidence: Math.max(aiResult.confidence, patternResult.confidence),
-        summary: `AI classification: ${aiResult.reasoning}`,
-        nextSteps: aiResult.nextSteps || patternResult.nextSteps,
+        type: patternResult.type,
+        company: patternResult.company,
+        jobTitle: patternResult.jobTitle,
+        confidence: patternResult.confidence,
+        summary: `Pattern-based classification: ${patternResult.summary || 'Classified using email patterns'}`,
+        nextSteps: patternResult.nextSteps,
         deadline: patternResult.deadline,
         assessmentLink: patternResult.assessmentLink,
         fromDomain: patternResult.fromDomain,
         isJobRelated: true,
-        aiClassification: aiResult,
         patternClassification: patternResult
       };
     }
     
-    return {
-      type: aiResult.type,
-      company: aiResult.company,
-      jobTitle: aiResult.jobTitle,
-      confidence: aiResult.confidence,
-      summary: aiResult.reasoning,
-      nextSteps: aiResult.nextSteps,
-      deadline: null,
-      assessmentLink: null,
-      fromDomain: this.extractDomain(emailData.from),
-      isJobRelated: true,
-      aiClassification: aiResult
-    };
+    // If pattern confidence is too low, don't classify as job-related
+    console.log(`❌ Email not classified as job-related (pattern confidence: ${patternResult?.confidence || 0}%)`);
+    return null;
   }
 }
 
