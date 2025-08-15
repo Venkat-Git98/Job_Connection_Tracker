@@ -205,4 +205,95 @@ router.post('/classification-feedback', async (req, res) => {
   }
 });
 
+// Delete email event
+router.delete('/events/:eventId', async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    if (!eventId || isNaN(eventId)) {
+      return res.status(400).json({
+        error: 'Valid email event ID is required'
+      });
+    }
+    
+    const pool = require('../config/database');
+    
+    // First check if the email event exists
+    const checkQuery = 'SELECT id, email_subject FROM email_events WHERE id = $1';
+    const checkResult = await pool.query(checkQuery, [eventId]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Email event not found'
+      });
+    }
+    
+    // Delete the email event
+    const deleteQuery = 'DELETE FROM email_events WHERE id = $1 RETURNING *';
+    const deleteResult = await pool.query(deleteQuery, [eventId]);
+    
+    console.log(`🗑️ Deleted email event: ${checkResult.rows[0].email_subject}`);
+    
+    res.json({
+      success: true,
+      message: 'Email event deleted successfully',
+      deletedEvent: {
+        id: deleteResult.rows[0].id,
+        subject: deleteResult.rows[0].email_subject
+      }
+    });
+  } catch (error) {
+    console.error('Failed to delete email event:', error);
+    res.status(500).json({
+      error: 'Failed to delete email event',
+      message: error.message
+    });
+  }
+});
+
+// Bulk delete email events
+router.delete('/events', async (req, res) => {
+  try {
+    const { eventIds } = req.body;
+    
+    if (!eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
+      return res.status(400).json({
+        error: 'Array of email event IDs is required'
+      });
+    }
+    
+    // Validate all IDs are numbers
+    const invalidIds = eventIds.filter(id => isNaN(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        error: 'All event IDs must be valid numbers'
+      });
+    }
+    
+    const pool = require('../config/database');
+    
+    // Delete the email events
+    const deleteQuery = 'DELETE FROM email_events WHERE id = ANY($1::int[]) RETURNING id, email_subject';
+    const deleteResult = await pool.query(deleteQuery, [eventIds]);
+    
+    console.log(`🗑️ Bulk deleted ${deleteResult.rows.length} email events`);
+    
+    res.json({
+      success: true,
+      message: `Successfully deleted ${deleteResult.rows.length} email events`,
+      deletedCount: deleteResult.rows.length,
+      deletedEvents: deleteResult.rows.map(row => ({
+        id: row.id,
+        subject: row.email_subject
+      }))
+    });
+  } catch (error) {
+    console.error('Failed to bulk delete email events:', error);
+    res.status(500).json({
+      error: 'Failed to bulk delete email events',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

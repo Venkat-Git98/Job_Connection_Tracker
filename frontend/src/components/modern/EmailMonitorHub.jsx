@@ -12,6 +12,9 @@ const EmailMonitorHub = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [isMonitoring, setIsMonitoring] = useState(false)
+  const [selectedEvents, setSelectedEvents] = useState(new Set())
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [eventToDelete, setEventToDelete] = useState(null)
   const { showSuccess, showError, showInfo } = useToast()
   const { currentUser } = useUser()
 
@@ -149,6 +152,60 @@ const EmailMonitorHub = () => {
     }
   }
 
+  const handleDeleteEvent = async (eventId) => {
+    setEventToDelete(eventId)
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDeleteEvent = async () => {
+    try {
+      await apiService.deleteEmailEvent(eventToDelete)
+      showSuccess('Email event deleted successfully')
+      setShowDeleteConfirm(false)
+      setEventToDelete(null)
+      loadEmailEvents() // Refresh the list
+    } catch (error) {
+      console.error('Failed to delete email event:', error)
+      showError('Failed to delete email event')
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedEvents.size === 0) {
+      showError('Please select events to delete')
+      return
+    }
+
+    try {
+      const eventIds = Array.from(selectedEvents)
+      await apiService.bulkDeleteEmailEvents(eventIds)
+      showSuccess(`Successfully deleted ${eventIds.length} email events`)
+      setSelectedEvents(new Set())
+      loadEmailEvents() // Refresh the list
+    } catch (error) {
+      console.error('Failed to bulk delete email events:', error)
+      showError('Failed to delete selected email events')
+    }
+  }
+
+  const handleSelectEvent = (eventId) => {
+    const newSelected = new Set(selectedEvents)
+    if (newSelected.has(eventId)) {
+      newSelected.delete(eventId)
+    } else {
+      newSelected.add(eventId)
+    }
+    setSelectedEvents(newSelected)
+  }
+
+  const handleSelectAll = () => {
+    if (selectedEvents.size === filteredEvents.length) {
+      setSelectedEvents(new Set())
+    } else {
+      setSelectedEvents(new Set(filteredEvents.map(event => event.id)))
+    }
+  }
+
   const handleCheckNow = async () => {
     try {
       showInfo('Checking emails now...')
@@ -185,6 +242,25 @@ const EmailMonitorHub = () => {
   }
 
   const columns = [
+    {
+      key: 'select',
+      label: (
+        <input
+          type="checkbox"
+          checked={selectedEvents.size === filteredEvents.length && filteredEvents.length > 0}
+          onChange={handleSelectAll}
+          style={{ margin: 0 }}
+        />
+      ),
+      render: (value, row) => (
+        <input
+          type="checkbox"
+          checked={selectedEvents.has(row.id)}
+          onChange={() => handleSelectEvent(row.id)}
+          style={{ margin: 0 }}
+        />
+      )
+    },
     {
       key: 'subject',
       label: 'Subject',
@@ -229,6 +305,19 @@ const EmailMonitorHub = () => {
         const metadata = typeof value === 'string' ? JSON.parse(value || '{}') : value || {}
         return metadata.jobStatusUpdated ? '✅ Yes' : '⏳ Pending'
       }
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (value, row) => (
+        <button
+          onClick={() => handleDeleteEvent(row.id)}
+          className="btn btn-sm btn-danger"
+          title="Delete this email event"
+        >
+          🗑️ Delete
+        </button>
+      )
     }
   ]
 
@@ -372,6 +461,21 @@ const EmailMonitorHub = () => {
             Search
           </button>
         </form>
+
+        {/* Bulk Actions */}
+        {selectedEvents.size > 0 && (
+          <div className="bulk-actions">
+            <span className="selected-count">
+              {selectedEvents.size} event{selectedEvents.size !== 1 ? 's' : ''} selected
+            </span>
+            <button
+              onClick={handleBulkDelete}
+              className="btn btn-danger"
+            >
+              🗑️ Delete Selected ({selectedEvents.size})
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Email Events Table */}
@@ -414,6 +518,45 @@ const EmailMonitorHub = () => {
                 <h4>Automatic Job Updates</h4>
                 <p>When rejection or interview emails are detected, job statuses will be updated automatically.</p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Confirm Delete</h3>
+              <button 
+                className="modal-close"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <p>Are you sure you want to delete this email event?</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
+                This action cannot be undone.
+              </p>
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-danger"
+                onClick={confirmDeleteEvent}
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -540,6 +683,103 @@ const EmailMonitorHub = () => {
           min-width: 150px;
         }
 
+        .bulk-actions {
+          display: flex;
+          align-items: center;
+          gap: var(--space-4);
+          padding: var(--space-3);
+          background: var(--bg-glass-light);
+          border: 1px solid var(--border-primary);
+          border-radius: var(--radius-lg);
+          margin-top: var(--space-4);
+        }
+
+        .selected-count {
+          font-size: var(--text-sm);
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+
+        .modal-content {
+          background: var(--bg-card);
+          border: 1px solid var(--border-primary);
+          border-radius: var(--radius-2xl);
+          width: 90%;
+          max-width: 400px;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+
+        .modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: var(--space-6);
+          border-bottom: 1px solid var(--border-primary);
+        }
+
+        .modal-header h3 {
+          margin: 0;
+          font-size: var(--text-lg);
+          font-weight: 700;
+          color: var(--text-primary);
+        }
+
+        .modal-close {
+          background: none;
+          border: none;
+          font-size: var(--text-2xl);
+          color: var(--text-muted);
+          cursor: pointer;
+          padding: 0;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: var(--radius-full);
+          transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+          background: var(--bg-muted);
+          color: var(--text-primary);
+        }
+
+        .modal-body {
+          padding: var(--space-6);
+        }
+
+        .modal-body p {
+          margin: 0 0 var(--space-3) 0;
+          color: var(--text-primary);
+        }
+
+        .modal-body p:last-child {
+          margin-bottom: 0;
+        }
+
+        .modal-footer {
+          display: flex;
+          gap: var(--space-3);
+          justify-content: flex-end;
+          padding: var(--space-6);
+          border-top: 1px solid var(--border-primary);
+        }
+
         .setup-instructions {
           display: flex;
           flex-direction: column;
@@ -604,6 +844,36 @@ const EmailMonitorHub = () => {
           .stats-grid {
             grid-template-columns: repeat(2, 1fr);
           }
+
+          .bulk-actions {
+            flex-direction: column;
+            align-items: stretch;
+            gap: var(--space-2);
+          }
+        }
+
+        /* Button styles */
+        .btn-sm {
+          padding: var(--space-1) var(--space-2);
+          font-size: var(--text-xs);
+          border-radius: var(--radius-md);
+        }
+
+        .btn-danger {
+          background: var(--danger-500);
+          color: white;
+          border: 1px solid var(--danger-500);
+        }
+
+        .btn-danger:hover {
+          background: var(--danger-600);
+          border-color: var(--danger-600);
+        }
+
+        .btn-danger:disabled {
+          background: var(--danger-300);
+          border-color: var(--danger-300);
+          cursor: not-allowed;
         }
       `}</style>
     </div>

@@ -11,6 +11,8 @@ const EmailEventsTab = () => {
   const [loading, setLoading] = useState(true);
   const [monitoringStatus, setMonitoringStatus] = useState(null);
   const [typeFilter, setTypeFilter] = useState('all');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState(null);
   const { showSuccess, showError } = useToast();
 
   useEffect(() => {
@@ -53,6 +55,24 @@ const EmailEventsTab = () => {
       showError('Failed to check emails');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    setEventToDelete(eventId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteEvent = async () => {
+    try {
+      await apiService.deleteEmailEvent(eventToDelete);
+      showSuccess('Email event deleted successfully');
+      setShowDeleteConfirm(false);
+      setEventToDelete(null);
+      loadEmailEvents(); // Refresh the list
+    } catch (error) {
+      console.error('Failed to delete email event:', error);
+      showError('Failed to delete email event');
     }
   };
 
@@ -148,6 +168,28 @@ const EmailEventsTab = () => {
           </div>
         );
       }
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (value, row) => (
+        <button
+          onClick={() => handleDeleteEvent(row.id)}
+          className="btn btn-sm"
+          style={{ 
+            background: '#dc3545', 
+            color: 'white', 
+            border: '1px solid #dc3545',
+            padding: '4px 8px',
+            fontSize: '12px',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+          title="Delete this email event"
+        >
+          🗑️ Delete
+        </button>
+      )
     }
   ];
 
@@ -296,6 +338,62 @@ const EmailEventsTab = () => {
             <p style={{ color: '#666', fontSize: '14px' }}>
               The system will automatically check for job-related emails every 5 minutes and update your job statuses accordingly.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => setShowDeleteConfirm(false)}>
+          <div style={{
+            background: 'white',
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            width: '90%',
+            maxWidth: '400px',
+            padding: '24px'
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '700' }}>
+              Confirm Delete
+            </h3>
+            
+            <p style={{ margin: '0 0 8px 0' }}>
+              Are you sure you want to delete this email event?
+            </p>
+            <p style={{ margin: '0 0 24px 0', color: '#666', fontSize: '14px' }}>
+              This action cannot be undone.
+            </p>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn"
+                style={{ 
+                  background: '#dc3545', 
+                  color: 'white', 
+                  border: '1px solid #dc3545' 
+                }}
+                onClick={confirmDeleteEvent}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

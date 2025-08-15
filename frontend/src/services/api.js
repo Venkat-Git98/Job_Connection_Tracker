@@ -99,6 +99,8 @@ export const apiService = {
   stopEmailMonitoring: () => api.post('/email/stop-monitoring'),
   getEmailClassificationStats: () => api.get('/email/classification-stats'),
   submitEmailClassificationFeedback: (data) => api.post('/email/classification-feedback', data),
+  deleteEmailEvent: (eventId) => api.delete(`/email/events/${eventId}`),
+  bulkDeleteEmailEvents: (eventIds) => api.delete('/email/events', { data: { eventIds } }),
 
   // Companies
   getCompanies: (params = {}) => api.get('/outreach/summary', { params }),
