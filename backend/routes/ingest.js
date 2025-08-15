@@ -62,30 +62,94 @@ router.post('/page', async (req, res) => {
 
       console.log('✅ Company data validated successfully:', value);
 
-      // Add company using existing API
+      // Add company directly to database
       try {
-        const addCompanyResult = await fetch(`${req.protocol}://${req.get('host')}/api/outreach/add-company`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-User-ID': req.user.id.toString()
-          },
-          body: JSON.stringify({ companyName: value.companyName })
-        });
+        const pool = require('../config/database');
+        
+        // Helper function to check if user_id column exists
+        async function checkUserIdColumn(pool, tableName) {
+          try {
+            const result = await pool.query(`
+              SELECT column_name 
+              FROM information_schema.columns 
+              WHERE table_name = $1 AND column_name = 'user_id'
+            `, [tableName]);
+            return result.rows.length > 0;
+          } catch (error) {
+            return false;
+          }
+        }
+        
+        const hasUserIdColumn = await checkUserIdColumn(pool, 'profiles');
+        const companyName = value.companyName;
+        
+        // Check if company already exists
+        const checkQuery = hasUserIdColumn ? `
+          SELECT COUNT(*) as count 
+          FROM profiles 
+          WHERE current_company ILIKE $1 AND user_id = $2;
+        ` : `
+          SELECT COUNT(*) as count 
+          FROM profiles 
+          WHERE current_company ILIKE $1;
+        `;
 
-        if (addCompanyResult.ok) {
-          const companyData = await addCompanyResult.json();
-          console.log('💾 Company added successfully:', companyData);
-          
-          res.json({
+        const checkParams = hasUserIdColumn ? [companyName, req.user?.id || 1] : [companyName];
+        const checkResult = await pool.query(checkQuery, checkParams);
+        
+        if (parseInt(checkResult.rows[0].count) > 0) {
+          console.log('⚠️ Company already exists:', companyName);
+          return res.json({
             success: true,
             type: 'company',
-            data: { ...companyData, ...value },
-            message: `Company "${value.companyName}" added successfully`
+            data: { company: { name: companyName }, ...value },
+            message: `Company "${companyName}" already exists in your tracking list`
           });
-        } else {
-          throw new Error('Failed to add company to database');
         }
+
+        // Create a placeholder profile for the company
+        const insertQuery = hasUserIdColumn ? `
+          INSERT INTO profiles (
+            person_name, profile_url, current_company, headline, last_seen_at, user_id
+          ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5)
+          RETURNING *;
+        ` : `
+          INSERT INTO profiles (
+            person_name, profile_url, current_company, headline, last_seen_at
+          ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+          RETURNING *;
+        `;
+
+        const placeholderUrl = value.companyUrl || `https://linkedin.com/company/${companyName.toLowerCase().replace(/\s+/g, '-')}`;
+        const insertParams = hasUserIdColumn ? [
+          `${companyName} - Company Placeholder`,
+          placeholderUrl,
+          companyName,
+          'Company placeholder for tracking purposes',
+          req.user?.id || 1
+        ] : [
+          `${companyName} - Company Placeholder`,
+          placeholderUrl,
+          companyName,
+          'Company placeholder for tracking purposes'
+        ];
+        
+        const dbResult = await pool.query(insertQuery, insertParams);
+        console.log('💾 Company added successfully:', dbResult.rows[0]);
+        
+        res.json({
+          success: true,
+          type: 'company',
+          data: {
+            company: {
+              name: companyName,
+              profileId: dbResult.rows[0].id
+            },
+            ...value
+          },
+          message: `Company "${companyName}" added successfully`
+        });
+        
       } catch (dbError) {
         console.error('❌ Failed to add company:', dbError);
         res.status(500).json({
